@@ -84,13 +84,15 @@ function control_player(pl)
 	end
 
  if pl.y < 4.6 then
-	 if not solid_pl then
+	 if true then --not solid_pl then
 		 wy-=0.2
+		 --wy-=(4.6 - pl.y)
 		end
 	 pl.y=4.6
  elseif pl.y > 8.6 then
-	 if not solid_pl then
+	 if true then --not solid_pl then
 		 wy+=0.2
+		 --wy+=pl.y-8.6
 		end
 	 pl.y=8.6
  end
@@ -150,7 +152,7 @@ function draw_actor(a)
  local sy = (a.y * 8) - 4
  -- spr(a.spr + a.frame, sx, sy)
  
- local fx=a.dir==l or a.dx < 0
+ local fx=a.dir==l or (a.dx < 0 and a.dir != r)
  local fy=a.dir==b -- todo invert based on gravity
  if a.state then
 	 spr(anim[a.state][ceil(a.frame)],sx,sy,1,1, fx,fy)
@@ -170,7 +172,7 @@ function _draw()
  --end
  --printh(wy.." "..ceil(wy)-wy)
  
- map(0,0,0,(ceil(wy)-wy)*9,16,16)
+ map(0,0,0,ceil((ceil(wy)-wy)*10),16,16)
  --map(0,0,0,0,16,16)
  foreach(actor,draw_actor)
  
@@ -328,7 +330,7 @@ function move_actor(a)
  	a.dy += w_g_y
  else
   a.dy *= -a.bounce
-  sfx(2)
+  --sfx(2)
  end
 
  
