@@ -2,52 +2,312 @@ pico-8 cartridge // http://www.pico-8.com
 version 29
 __lua__
 -- init tab
-t,r,b,l=0,1,2,3
+t,r,b,l="t","r","b","l"
 idle="idle"
-anim={idle={128,129}}
+-- note: animates from ceil(0.1..<#) 
+anim={
+	idle={128,129},
+	t={131},
+	r={144,145,146,147},
+	b={131},
+	l={144,145,146,147},
+}
 
+actor = {}
 
 function _init()
-	p={
-		x=40,y=40, 
-		dir=r, 
-		state=idle, af=1
-	}
+	wy=0
+
+	pl=make_actor(4,4)
+	pl.dir=r
+ pl.state=idle
+ pl.frame=1
+ pl.inertia=0.5
+	
+	
+ local ball = make_actor(8.5,7.5)
+ ball.spr = 33
+ ball.dx=0.05
+ ball.dy=-0.1
+ ball.inertia=0.5
+ -- ball.bounce = 0.8
+	
 end
 
 
 -->8
 -- update tab
-function _update()
-	if btn(⬅️) then
-		p.dir = l
-	end
-	if btn(➡️) then
-		p.dir = r
-	end
+function control_player(pl)
 
+	pl.state = idle
 
+ -- how fast to accelerate
+ accel = 0.1
+ if btn(⬅️) then
+ 	pl.dx -= accel 
+ 	pl.dir = l
+ 	pl.state = l
+ end
+ if btn(➡️) then
+  pl.dx += accel 
+ 	pl.dir = r
+ 	pl.state = r
+ end
+ if btn(⬆️) then
+   pl.dy -= accel 
+  	pl.dir = t
+ 	pl.state = t
+ end
+ if btn(⬇️) then
+  pl.dy += accel 
+ 	pl.dir = b
+ 	pl.state = b
+ end
 
-	-- animate
-	p.af += 1
-	--print(p.af)
-	if p.af > #anim[p.state] then
-		p.af = 1
+ -- play a sound if moving
+ -- (every 4 ticks)
+ 
+ --if (abs(pl.dx)+abs(pl.dy) > 0.1
+ --    and (pl.t%4) == 0) then
+ -- sfx(1)
+ --end
+ 
+	if pl.state == idle then
+	 pl.frame += 0.1
+
+		if pl.frame >= #anim[pl.state] then
+			pl.frame = 0.1
+		end
 	end
 end
+
+function update_map(wy)
+ for y=0,15 do
+		mset(0,y,1+y%1+(wy%2))
+	end
+end
+
+function _update()
+ wy+=0.2
+ update_map(wy)
+
+ control_player(pl)
+ foreach(actor, move_actor)
+end
+
+
+
+
 -->8
 --draw tab
+
+function draw_actor(a)
+ local sx = (a.x * 8) - 4
+ local sy = (a.y * 8) - 4
+ -- spr(a.spr + a.frame, sx, sy)
+ 
+ local fx=a.dir==l
+ local fy=a.dir==b
+ if a.state then
+	 spr(anim[a.state][ceil(a.frame)],sx,sy,1,1, fx,fy)
+	else
+		-- todo default per actor
+	 spr(0,sx,sy,1,1, fx,fy)
+	end
+end
+
 function _draw()
  cls()
- --print(#anim[p.state]..p.af..anim[p.state][p.af])
- local fx=p.dir==l
- local fy=p.dir==b
- spr(anim[p.state][p.af],p.x,p.y,1,1, fx,fy)
+ 
+ --if pl.y < 4 then
+ --	camera(0,-32)
+ --elseif pl.y > 8 then
+ --	camera(0,32)
+ --end
+ 
+ map(0,0,0,0,16,16)
+ foreach(actor,draw_actor)
+ 
+ print("x "..pl.x,0,120,7)
+ print("y "..pl.y,48,120,7)
+
+ print("f "..pl.frame,90,120,7)
+ 
 end
+
 
 
 -->8
 -- support library
+
+-- wall and actor collisions
+-- by zep
+
+actor = {} --all actors in world
+
+-- make an actor
+-- and add to global collection
+-- x,y means center of the actor
+-- in map tiles (not pixels)
+function make_actor(x, y)
+ a={}
+ a.x = x
+ a.y = y
+ a.dx = 0
+ a.dy = 0
+ a.dir = t
+ --a.spr = 16
+ a.state = nil
+ a.frame = 0
+ a.t = 0
+ a.inertia = 0.6
+ a.bounce  = 1
+ --a.frames=2
+ 
+ -- half-width and half-height
+ -- slightly less than 0.5 so
+ -- that will fit through 1-wide
+ -- holes.
+ a.w = 0.4
+ a.h = 0.4
+ 
+ add(actor,a)
+ 
+ return a
+end
+
+-- for any given point on the
+-- map, true if there is wall
+-- there.
+
+function solid(x, y)
+
+ -- grab the cell value
+ val=mget(x, y)
+ 
+ -- check if flag 1 is set (the
+ -- orange toggle button in the 
+ -- sprite editor)
+ return fget(val, 0)
+
+end
+
+-- solid_area
+-- check if a rectangle overlaps
+-- with any walls
+
+--(this version only works for
+--actors less than one tile big)
+
+function solid_area(x,y,w,h)
+
+ return 
+  solid(x-w,y-h) or
+  solid(x+w,y-h) or
+  solid(x-w,y+h) or
+  solid(x+w,y+h)
+end
+
+
+-- true if a will hit another
+-- actor after moving dx,dy
+function solid_actor(a, dx, dy)
+ for a2 in all(actor) do
+  if a2 != a then
+   local x=(a.x+dx) - a2.x
+   local y=(a.y+dy) - a2.y
+   if ((abs(x) < (a.w+a2.w)) and
+      (abs(y) < (a.h+a2.h)))
+   then 
+    
+    -- moving together?
+    -- this allows actors to
+    -- overlap initially 
+    -- without sticking together    
+    if (dx != 0 and abs(x) <
+        abs(a.x-a2.x)) then
+     v=a.dx + a2.dy
+     a.dx = v/2
+     a2.dx = v/2
+     return true 
+    end
+    
+    if (dy != 0 and abs(y) <
+        abs(a.y-a2.y)) then
+     v=a.dy + a2.dy
+     a.dy=v/2
+     a2.dy=v/2
+     return true 
+    end
+    
+    --return true
+    
+   end
+  end
+ end
+ return false
+end
+
+
+-- checks both walls and actors
+function solid_a(a, dx, dy)
+ if solid_area(a.x+dx,a.y+dy,
+    a.w,a.h) then
+    return true end
+ return solid_actor(a, dx, dy) 
+end
+
+function move_actor(a)
+
+ -- only move actor along x
+ -- if the resulting position
+ -- will not overlap with a wall
+
+ if not solid_a(a, a.dx, 0) 
+ then
+  a.x += a.dx
+ else   
+  -- otherwise bounce
+  a.dx *= -a.bounce
+  sfx(2)
+ end
+
+ -- ditto for y
+
+ if not solid_a(a, 0, a.dy) then
+  a.y += a.dy
+ else
+  a.dy *= -a.bounce
+  sfx(2)
+ end
+ 
+ -- apply inertia
+ -- set dx,dy to zero if you
+ -- don't want inertia
+ 
+ a.dx *= a.inertia
+ a.dy *= a.inertia
+ 
+ -- advance one frame every
+ -- time actor moves 1/4 of
+ -- a tile
+
+	if a.state then
+	 a.frame += abs(a.dx) * 4
+ 	a.frame += abs(a.dy) * 4
+	 -- a.frame %= a.frames -- always 2 frames
+
+		if a.frame >= #anim[a.state] then
+			a.frame = 0.1
+		end
+	end
+ 
+
+ a.t += 1
+ 
+end
+
+
 -------------------------------
 -- scroll tile
 -- see that water tile?
