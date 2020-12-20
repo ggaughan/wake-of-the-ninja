@@ -19,8 +19,15 @@ anim={
 actor = {}
 w = {}
 w_h = 100
-w_default_row = {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1}
+w_default_brick = 59
+w_default_row = {w_default_brick,0,0,0,0,0,0,0,0,0,0,0,0,0,0,w_default_brick}
 w_g_y = 0.1
+
+default_energy = 1
+default_energy_use = default_energy/4
+min_energy = 1
+low_energy = min_energy * 10
+max_energy = default_energy * 30
 
 function _init()
 	wy=(w_h/2)
@@ -33,6 +40,7 @@ function _init()
  pl.frame=1
  pl.inertia=0.5
  --pl.bounce=0.2
+ pl.energy = 10
 	
 	
  local ball = make_actor(8.5,7.5)
@@ -52,7 +60,7 @@ function control_player(pl)
 	pl.state = idle
 
  -- how fast to accelerate
- accel = 0.1
+ local accel = 0.1
  if btn(⬅️) then
  	pl.dx -= accel 
  	pl.dir = l
@@ -64,15 +72,33 @@ function control_player(pl)
  	pl.state = r
  end
  if btn(⬆️) then
-  pl.dy -= accel 
- 	pl.dir = t
- 	pl.state = t
+	 if pl.energy > min_energy then
+	 	if (pl.energy < low_energy) accel = accel/4
+	  pl.dy -= accel 
+	 	pl.dir = t
+	 	pl.state = t
+	 	pl.energy -= default_energy_use
+	 end --else --'fall'
  end
  if btn(⬇️) then
-  pl.dy += accel 
- 	pl.dir = b
- 	pl.state = b
+	 if pl.energy > min_energy then
+	 	if (pl.energy < low_energy) accel = accel/4
+	  pl.dy += accel 
+ 		pl.dir = b
+ 		pl.state = b
+	 	pl.energy -= default_energy_use
+	 end --else --'fall'
  end
+
+	if not btn(⬇️) and w_g_y < 0 then
+ 	pl.energy += default_energy 
+	end
+	if not btn(⬆️) and w_g_y > 0 then
+ 	pl.energy += default_energy 
+	end
+	if pl.energy > max_energy then
+		pl.energy = max_energy
+	end
 
 	solid_pl = solid_a(pl, 0, pl.dy+w_g_y) 
 	if pl.dy > 0 then
@@ -83,6 +109,7 @@ function control_player(pl)
 		end
 	end
 
+	-- todo allow gap closing in some cases here
  if pl.y < 4.6 then
 	 if true then --not solid_pl then
 		 wy-=0.2
@@ -181,6 +208,7 @@ function _draw()
  print("wy "..wy,90,120,7)
  
  --print("m "..stat(0),90,1,7)  -- in k
+ print("e "..pl.energy,90,1,7)  -- in k
  
 end
 
@@ -363,7 +391,7 @@ end
 
 function make_world_row(y)
  if rnd() > 0.8 then
-  local sp = 1
+  local sp = w_default_brick
   -- ledges
 	 if rnd() > 0.5 then
 	 	w[y] = {}
@@ -382,7 +410,13 @@ end
 
 function make_world(h)
 	w={}
-	for i=0,h do
+	w[0] = {}
+	w[h] = {}
+	for i=0,15 do
+	 w[0][i] = w_default_brick
+	 w[h][i] = w_default_brick
+	end
+	for i=1,h-1 do
 	 make_world_row(i)
 	end
 end
@@ -672,7 +706,7 @@ __label__
 66666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666
 
 __gff__
-000101010181010001000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000000c0000040400000000000000000000000000000000000000000000000000000000000c0c00000000000000000001000000000000000001000000
+000101010181010001000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000001000000000000000000000c0000040400000000000000000000000000000000000000000000000000000000000c0c00000000000000000001000000000000000001000000
 0000000000000000000001010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __sfx__
 000100002e1502e1502f1502f1502f150351503715000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100
