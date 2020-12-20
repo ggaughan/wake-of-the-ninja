@@ -2,8 +2,10 @@ pico-8 cartridge // http://www.pico-8.com
 version 29
 __lua__
 -- init tab
+-----------
 t,r,b,l="t","r","b","l"
 idle="idle"
+falling="falling"
 -- note: animates from ceil(0.1..<#) 
 anim={
 	idle={128,129},
@@ -11,25 +13,33 @@ anim={
 	r={144,145,146,147},
 	b={131},
 	l={144,145,146,147},
+	falling={163,164},
 }
 
 actor = {}
+w = {}
+w_h = 100
+w_default_row = {1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1}
+w_g_y = 0.1
 
 function _init()
-	wy=0
+	wy=(w_h/2)
+	wx=0
+	make_world(w_h)
 
 	pl=make_actor(4,4)
 	pl.dir=r
  pl.state=idle
  pl.frame=1
  pl.inertia=0.5
+ --pl.bounce=0.2
 	
 	
  local ball = make_actor(8.5,7.5)
  ball.spr = 33
  ball.dx=0.05
- ball.dy=-0.1
- ball.inertia=0.5
+ ball.dy=0.1
+ ball.inertia=0.0
  -- ball.bounce = 0.8
 	
 end
@@ -54,14 +64,35 @@ function control_player(pl)
  	pl.state = r
  end
  if btn(⬆️) then
-   pl.dy -= accel 
-  	pl.dir = t
+  pl.dy -= accel 
+ 	pl.dir = t
  	pl.state = t
  end
  if btn(⬇️) then
   pl.dy += accel 
  	pl.dir = b
  	pl.state = b
+ end
+
+	solid_pl = solid_a(pl, 0, pl.dy+w_g_y) 
+	if pl.dy > 0 then
+		if pl.state != b then
+			if not solid_pl then
+			 pl.state = falling
+			end
+		end
+	end
+
+ if pl.y < 4.6 then
+	 if not solid_pl then
+		 wy-=0.2
+		end
+	 pl.y=4.6
+ elseif pl.y > 8.6 then
+	 if not solid_pl then
+		 wy+=0.2
+		end
+	 pl.y=8.6
  end
 
  -- play a sound if moving
@@ -83,15 +114,28 @@ end
 
 function update_map(wy)
  for y=0,15 do
-		mset(0,y,1+y%1+(wy%2))
+		--mset(0,y,1+y%1+(wy%2))
+		for x=0,15 do
+			if w[wy+y] then
+				--printh(wy+y..","..#w[wy+y])
+				if w[wy+y][wx+x] then
+					mset(x,y,w[wy+y][wx+x])
+				else
+					mset(x,y,w_default_row[x+1])
+				end
+			else
+				mset(x,y,w_default_row[x+1])
+			end
+		end
 	end
 end
 
 function _update()
- wy+=0.2
- update_map(wy)
-
  control_player(pl)
+
+ -- todo skip if not changed
+ update_map(ceil(wy))
+
  foreach(actor, move_actor)
 end
 
@@ -106,8 +150,8 @@ function draw_actor(a)
  local sy = (a.y * 8) - 4
  -- spr(a.spr + a.frame, sx, sy)
  
- local fx=a.dir==l
- local fy=a.dir==b
+ local fx=a.dir==l or a.dx < 0
+ local fy=a.dir==b -- todo invert based on gravity
  if a.state then
 	 spr(anim[a.state][ceil(a.frame)],sx,sy,1,1, fx,fy)
 	else
@@ -124,14 +168,17 @@ function _draw()
  --elseif pl.y > 8 then
  --	camera(0,32)
  --end
+ --printh(wy.." "..ceil(wy)-wy)
  
- map(0,0,0,0,16,16)
+ map(0,0,0,(ceil(wy)-wy)*9,16,16)
+ --map(0,0,0,0,16,16)
  foreach(actor,draw_actor)
  
  print("x "..pl.x,0,120,7)
  print("y "..pl.y,48,120,7)
-
- print("f "..pl.frame,90,120,7)
+ print("wy "..wy,90,120,7)
+ 
+ --print("m "..stat(0),90,1,7)  -- in k
  
 end
 
@@ -183,13 +230,13 @@ end
 function solid(x, y)
 
  -- grab the cell value
- val=mget(x, y)
+ --val=mget(x, y)
+ val=mget(x, ceil(y-2))
  
- -- check if flag 1 is set (the
- -- orange toggle button in the 
+ -- check if flag 0 is set (the
+ -- red toggle button in the 
  -- sprite editor)
  return fget(val, 0)
-
 end
 
 -- solid_area
@@ -267,19 +314,24 @@ function move_actor(a)
  then
   a.x += a.dx
  else   
+  printh(a.dx.." "..a.y)
   -- otherwise bounce
   a.dx *= -a.bounce
-  sfx(2)
+  --sfx(2)
  end
 
  -- ditto for y
 
- if not solid_a(a, 0, a.dy) then
+ if not solid_a(a, 0, a.dy+w_g_y) then
   a.y += a.dy
+	 -- gravity
+ 	a.dy += w_g_y
  else
   a.dy *= -a.bounce
   sfx(2)
  end
+
+ 
  
  -- apply inertia
  -- set dx,dy to zero if you
@@ -305,6 +357,32 @@ function move_actor(a)
 
  a.t += 1
  
+end
+
+function make_world_row(y)
+ if rnd() > 0.8 then
+  local sp = 1
+  -- ledges
+	 if rnd() > 0.5 then
+	 	w[y] = {}
+	 	for i=0,rnd(6) do
+			 w[y][flr(i)] = sp
+			end
+		end
+	 if rnd() > 0.5 then
+	 	w[y] = {}
+	 	for i=0,rnd(6) do
+			 w[y][15-flr(i)] = sp
+			end
+		end
+	end
+end
+
+function make_world(h)
+	w={}
+	for i=0,h do
+	 make_world_row(i)
+	end
 end
 
 
