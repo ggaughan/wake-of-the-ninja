@@ -3,6 +3,8 @@ version 29
 __lua__
 -- init tab
 -----------
+debug = true
+
 t,r,b,l="t","r","b","l"
 idle="idle"
 falling="falling"
@@ -23,6 +25,10 @@ w_default_brick = 59
 w_default_row = {w_default_brick,0,0,0,0,0,0,0,0,0,0,0,0,0,0,w_default_brick}
 w_g_y = 0.1
 
+
+scroll_dy = 0.2
+wdy = 0
+
 default_energy = 1
 default_energy_use = default_energy/4
 min_energy = 1
@@ -30,8 +36,8 @@ low_energy = min_energy * 10
 max_energy = default_energy * 30
 
 function _init()
-	wy=(w_h/2)
-	wx=0
+ wy=(w_h/2)
+ wx=0
 	make_world(w_h)
 
 	pl=make_actor(4,4)
@@ -43,12 +49,12 @@ function _init()
  pl.energy = 10
 	
 	
- local ball = make_actor(8.5,7.5)
- ball.spr = 33
- ball.dx=0.05
- ball.dy=0.1
- ball.inertia=0.0
- -- ball.bounce = 0.8
+-- local ball = make_actor(8.5,7.5)
+-- ball.spr = 33
+-- ball.dx=0.05
+-- ball.dy=0.1
+-- ball.inertia=0.0
+-- -- ball.bounce = 0.8
 	
 end
 
@@ -109,20 +115,24 @@ function control_player(pl)
 		end
 	end
 
+	-- todo move to _draw
 	-- todo allow gap closing in some cases here
+	wdy = 0
  if pl.y < 4.6 then
 	 if true then --not solid_pl then
-		 wy-=0.2
+		 wdy-=scroll_dy
 		 --wy-=(4.6 - pl.y)
 		end
 	 pl.y=4.6
  elseif pl.y > 8.6 then
 	 if true then --not solid_pl then
-		 wy+=0.2
+		 wdy+=scroll_dy
 		 --wy+=pl.y-8.6
 		end
 	 pl.y=8.6
  end
+ wy += wdy
+ -- todo end
 
  -- play a sound if moving
  -- (every 4 ticks)
@@ -131,7 +141,8 @@ function control_player(pl)
  --    and (pl.t%4) == 0) then
  -- sfx(1)
  --end
- 
+
+	-- todo move to _draw?
 	if pl.state == idle then
 	 pl.frame += 0.1
 
@@ -141,14 +152,14 @@ function control_player(pl)
 	end
 end
 
-function update_map(wy)
+function update_map(cwy)
  for y=0,15 do
 		--mset(0,y,1+y%1+(wy%2))
 		for x=0,15 do
-			if w[wy+y] then
+			if w[cwy+y] then
 				--printh(wy+y..","..#w[wy+y])
-				if w[wy+y][wx+x] then
-					mset(x,y,w[wy+y][wx+x])
+				if w[cwy+y][wx+x] then
+					mset(x,y,w[cwy+y][wx+x])
 				else
 					mset(x,y,w_default_row[x+1])
 				end
@@ -187,10 +198,39 @@ function draw_actor(a)
 		-- todo default per actor
 	 spr(0,sx,sy,1,1, fx,fy)
 	end
+	
+ if debug then
+ 	rect(sx+a.dx,sy+0,
+    sx+a.dx + a.w*16,
+    sy+0 + a.h*16, 12) 
+    
+ 	rect(sx+0,sy + a.dy + w_g_y,
+    sx+0 + a.w*16,
+    sy+a.dy + w_g_y + a.h*16,10)    
+	end	
 end
 
 function _draw()
  cls()
+
+	-- todo allow gap closing in some cases here
+-- if pl.y < 4.6 then
+--	 if true then --not solid_pl then
+--		 wy-=0.2
+--		 --wy-=(4.6 - pl.y)
+--		end
+--	 pl.y=4.6
+-- elseif pl.y > 8.6 then
+--	 if true then --not solid_pl then
+--		 wy+=0.2
+--		 --wy+=pl.y-8.6
+--		end
+--	 pl.y=8.6
+-- end
+
+
+ --wy += wdy
+
  
  --if pl.y < 4 then
  --	camera(0,-32)
@@ -202,14 +242,23 @@ function _draw()
  map(0,0,0,ceil((ceil(wy)-wy)*10),16,16)
  --map(0,0,0,0,16,16)
  foreach(actor,draw_actor)
- 
- print("x "..pl.x,0,120,7)
- print("y "..pl.y,48,120,7)
- print("wy "..wy,90,120,7)
- 
- --print("m "..stat(0),90,1,7)  -- in k
- print("e "..pl.energy,90,1,7)  -- in k
- 
+
+ --wy += wdy
+--	if wdy < 0 then
+--		pl.y = 4.6
+--	elseif wdy > 0 then
+--		pl.y = 8.6
+--	end
+
+
+	if debug then 
+	 print("x "..pl.x,0,120,7)
+	 print("y "..pl.y,48,120,7)
+	 print("wy "..wy,90,120,7)
+	 
+	 --print("m "..stat(0),90,1,7)  -- in k
+	 print("e "..pl.energy,90,1,7)  -- in k
+ end
 end
 
 
@@ -261,8 +310,8 @@ function solid(x, y)
 
  -- grab the cell value
  --val=mget(x, y)
- val=mget(x, ceil(y-2))
- 
+ val=mget(x, y)
+	printh(x..","..y) 
  -- check if flag 0 is set (the
  -- red toggle button in the 
  -- sprite editor)
@@ -277,7 +326,11 @@ end
 --actors less than one tile big)
 
 function solid_area(x,y,w,h)
-
+	if debug then
+		rect(x*8-w*16, y*8-h*16, x*6+w*16, y*8+h*16, 9)
+		printh((x*8-w*16)..","..(y*8-h*16)..","..(x*6+w*16)..","..(y*8+h*16))
+	end
+	
  return 
   solid(x-w,y-h) or
   solid(x+w,y-h) or
@@ -352,12 +405,13 @@ function move_actor(a)
 
  -- ditto for y
 
- if not solid_a(a, 0, a.dy+w_g_y) then
+ if not solid_a(a, 0, a.dy) then
   a.y += a.dy
 	 -- gravity
- 	a.dy += w_g_y
+ 	--a.dy += w_g_y
  else
   a.dy *= -a.bounce
+  --printh(a.dy.."!")
   --sfx(2)
  end
 
