@@ -8,6 +8,7 @@ debug = true
 t,r,b,l="t","r","b","l"
 idle="idle"
 falling="falling"
+jump="jump"
 -- note: animates from ceil(0.1..<#) 
 anim={
 	idle={128,129},
@@ -16,6 +17,7 @@ anim={
 	b={131},
 	l={144,145,146,147},
 	falling={163,164},
+	jump={130}
 }
 
 actor = {}
@@ -79,19 +81,29 @@ function control_player(pl)
  end
  if btn(⬆️) then
 	 if pl.energy > min_energy then
-	 	if (pl.energy < low_energy) accel = accel/4
 	  pl.dy -= accel 
+	 	if pl.state != t then
+		 	if pl.dir != t then
+			 	pl.state = jump
+		 	else
+			 	pl.state = t
+		 	end
+		 end
 	 	pl.dir = t
-	 	pl.state = t
 	 	pl.energy -= default_energy_use
 	 end --else --'fall'
  end
  if btn(⬇️) then
 	 if pl.energy > min_energy then
-	 	if (pl.energy < low_energy) accel = accel/4
 	  pl.dy += accel 
+	 	if pl.state != b then
+		 	if pl.dir != b then
+			 	pl.state = jump
+		 	else
+			 	pl.state = b
+			 end
+		 end
  		pl.dir = b
- 		pl.state = b
 	 	pl.energy -= default_energy_use
 	 end --else --'fall'
  end
@@ -104,15 +116,6 @@ function control_player(pl)
 	end
 	if pl.energy > max_energy then
 		pl.energy = max_energy
-	end
-
-	solid_pl = solid_a(pl, 0, pl.dy+w_g_y) 
-	if pl.dy > 0 then
-		if pl.state != b then
-			if not solid_pl then
-			 pl.state = falling
-			end
-		end
 	end
 
 	-- todo move to _draw
@@ -142,12 +145,24 @@ function control_player(pl)
  -- sfx(1)
  --end
 
+	-- todo revisit 
+	if pl.dy >0 then
+		solid_pl = solid_a(pl, 0, pl.dy+wdy+w_g_y) 
+		if pl.state != b and pl.state != jump then
+			if not solid_pl then
+			 pl.state = falling
+			end
+		end
+	end
+	-- todo fall up (float) if -ve gravity
+ 
+
 	-- todo move to _draw?
 	if pl.state == idle then
 	 pl.frame += 0.1
 
 		if pl.frame >= #anim[pl.state] then
-			pl.frame = 0.1
+			pl.frame = 0.01
 		end
 	end
 end
@@ -248,11 +263,16 @@ function _draw()
 --		pl.y = 8.6
 --	end
 
-
 	if debug then 
+	 -- no use?:
+	 --local _test_y = solid_a(pl, 0, pl.dy) 
+	
 	 print("x "..pl.x,0,120,7)
 	 print("y "..pl.y,48,120,7)
 	 print("wy "..wy,90,120,7)
+
+		--print("c "..ceil((ceil(wy)-wy)*10), 10,1,7)
+		print("c "..ceil(wy)-wy, 10,1,7)
 	 
 	 --print("m "..stat(0),90,1,7)  -- in k
 	 print("e "..pl.energy,90,1,7)  -- in k
@@ -324,6 +344,8 @@ end
 --actors less than one tile big)
 
 function solid_area(x,y,w,h)
+
+	y = y - (ceil(wy)-wy)
  
  if debug then
 		rect(x*8-w*16, y*8-h*16, x*6+w*16, y*8+h*16, 9)
@@ -407,13 +429,18 @@ function move_actor(a)
  if not solid_a(a, 0, a.dy) then
   a.y += a.dy
 	 -- gravity
- 	--a.dy += w_g_y
+ 	a.dy += w_g_y
  else
   a.dy *= -a.bounce
   --printh(a.dy.."!")
   --sfx(2)
  end
 
+
+ -- todo player only - or set others' energy high
+ if (a.energy < low_energy) then
+	 a.dy *= a.inertia  --i.e. double
+	end
  
  
  -- apply inertia
@@ -428,12 +455,12 @@ function move_actor(a)
  -- a tile
 
 	if a.state then
-	 a.frame += abs(a.dx) * 4
- 	a.frame += abs(a.dy) * 4
+	 a.frame += abs(a.dx) * 1
+ 	a.frame += abs(a.dy) * 1
 	 -- a.frame %= a.frames -- always 2 frames
 
 		if a.frame >= #anim[a.state] then
-			a.frame = 0.1
+			a.frame = 0.01
 		end
 	end
  
