@@ -6,16 +6,21 @@ __lua__
 debug = true
 
 t,r,b,l="t","r","b","l"
+l_swim="l_swim"
+r_swim="r_swim"
 idle="idle"
 falling="falling"
 jump="jump"
 -- note: animates from ceil(0.1..<#) 
+-- todo pad all > 1 to 4?
 anim={
 	idle={128,129},
 	t={131},
 	r={144,145,146,147},
 	b={131},
 	l={144,145,146,147},
+	r_swim={135,136,137,136},
+	l_swim={135,136,137,136},
 	falling={163,164},
 	jump={130}
 }
@@ -41,6 +46,7 @@ max_energy = default_energy * 20
 
 function _init()
  wy=(w_h/2)
+ water_level = wy + pl_start_y+3
  wx=0
 	make_world(w_h)
 
@@ -111,10 +117,13 @@ function control_player(pl)
 	 end --else --'fall'
  end
 
-	if not btn(⬇️) and w_g_y < 0 then
+	local in_water = pl.y + wy + pl.dy - w_g_y > water_level 
+	printh("*"..(pl.y + wy + pl.dy - w_g_y) .."..".. water_level )
+
+	if not btn(⬇️) and in_water then
  	pl.energy += default_energy 
 	end
-	if not btn(⬆️) and w_g_y > 0 then
+	if not btn(⬆️) and not in_water then
 		--printh("!*"..pl.energy)
  	pl.energy += default_energy 
 	end
@@ -150,15 +159,37 @@ function control_player(pl)
  --end
 
 	-- todo revisit 
-	if pl.dy >0.1 then
-		solid_pl = solid_a(pl, 0, pl.dy+wdy+w_g_y) 
-		if pl.state != b and pl.state != jump then
-			if not solid_pl then
-			 pl.state = falling
+	if in_water then
+		printh(pl.dy)
+		if pl.dy > -0.1 then
+			solid_pl = solid_a(pl, 0, pl.dy+wdy-w_g_y) 
+			if pl.state != t and pl.state != jump then
+				if not solid_pl then
+				 pl.state = falling
+				end
+			end
+		end
+	else
+		if pl.dy > 0.1 then
+			solid_pl = solid_a(pl, 0, pl.dy+wdy+w_g_y) 
+			if pl.state != b and pl.state != jump then
+				if not solid_pl then
+				 pl.state = falling
+				end
 			end
 		end
 	end
 	-- todo fall up (float) if -ve gravity
+
+	--printh(pl.y + wy + pl.dy - w_g_y .. " .. ".. water_level)	
+	if in_water then
+	 -- todo idle float anim?
+		if pl.state == l then
+			pl.state = l_swim
+		elseif pl.state == r then
+			pl.state = r_swim
+		end
+	end
  
 
 	-- todo move to _draw?
@@ -209,8 +240,15 @@ function draw_actor(a)
  local sy = (a.y * 8) - 4
  -- spr(a.spr + a.frame, sx, sy)
  
+ local fy
  local fx=a.dir==l or (a.dx < 0 and a.dir != r)
- local fy=a.dir==b -- todo invert based on gravity
+ --todo remove:
+	--if a.y + wy > water_level then
+	--	-- invert based on gravity 
+	-- fy=a.dir==b
+	--else
+	fy=a.dir==b 
+	--end
  if a.state then
 	 spr(anim[a.state][ceil(a.frame)],sx,sy,1,1, fx,fy)
 	else
@@ -434,7 +472,11 @@ function move_actor(a)
  if not solid_a(a, 0, a.dy) then
   a.y += a.dy
 	 -- gravity
- 	a.dy += w_g_y
+	 if a.y + wy - 1 > water_level then
+	 	a.dy -= w_g_y
+	 else
+	 	a.dy += w_g_y
+	 end
   --printh(a.dy.."!")
  else
   a.dy *= -a.bounce
@@ -478,7 +520,7 @@ function move_actor(a)
 end
 
 function make_world_row(y)
- if y > wy + pl_start_y+3 then
+ if y > water_level then
  	w[y] = {}
 	 for key, value in pairs(w_default_row) do
 	  w[y][key-1] = value
@@ -491,7 +533,7 @@ function make_world_row(y)
  if rnd() > 0.8 then
   local sp = w_default_brick
   -- ledges
-	 if y > wy + pl_start_y+4 or y < wy + pl_start_y then
+	 if y > water_level+1 or y < water_level-4 then
 		 if rnd() > 0.5 then
 		  if w[y] == nil then
 		   w[y] = {}
@@ -530,9 +572,9 @@ function make_world(h)
 	end
 	
 	-- starting platform
-	w[wy + pl_start_y+3] = {}
+	w[water_level] = {}
 	for i=0,6 do
-	 w[wy + pl_start_y+3][i] = w_start_brick
+	 w[water_level][i] = w_start_brick
 	end
 
 end
