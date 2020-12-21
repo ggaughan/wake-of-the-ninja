@@ -25,9 +25,11 @@ w = {}
 w_h = 100
 w_default_brick = 59
 w_default_row = {w_default_brick,0,0,0,0,0,0,0,0,0,0,0,0,0,0,w_default_brick}
+w_start_brick = 141
+
 w_g_y = 0.1  -- gravity
 
-
+pl_start_y = 4
 scroll_dy = 0.2
 wdy = 0
 
@@ -42,7 +44,7 @@ function _init()
  wx=0
 	make_world(w_h)
 
-	pl=make_actor(4,4)
+	pl=make_actor(4,pl_start_y)
 	pl.dir=r
  pl.state=idle
  pl.frame=1
@@ -256,6 +258,7 @@ function _draw()
  
  map(0,0,0,ceil((ceil(wy)-wy)*10),16,16)
  --map(0,0,0,0,16,16)
+ 
  foreach(actor,draw_actor)
 
  --wy += wdy
@@ -475,35 +478,63 @@ function move_actor(a)
 end
 
 function make_world_row(y)
+ if y > wy + pl_start_y+3 then
+ 	w[y] = {}
+	 for key, value in pairs(w_default_row) do
+	  w[y][key-1] = value
+		end
+ 	for i=1,14 do
+		 w[y][i] = 10
+		end
+ end
+ 
  if rnd() > 0.8 then
   local sp = w_default_brick
   -- ledges
-	 if rnd() > 0.5 then
-	 	w[y] = {}
-	 	for i=0,rnd(6) do
-			 w[y][flr(i)] = sp
+	 if y > wy + pl_start_y+4 or y < wy + pl_start_y then
+		 if rnd() > 0.5 then
+		  if w[y] == nil then
+		   w[y] = {}
+		  end
+		 	for i=0,rnd(6) do
+				 w[y][flr(i)] = sp
+				end
 			end
-		end
-	 if rnd() > 0.5 then
-	 	w[y] = {}
-	 	for i=0,rnd(6) do
-			 w[y][15-flr(i)] = sp
+		 if rnd() > 0.5 then
+		  if w[y] == nil then
+		   w[y] = {}
+		  end
+		 	for i=0,rnd(6) do
+				 w[y][15-flr(i)] = sp
+				end
 			end
+		-- else player start drop area
 		end
 	end
 end
 
 function make_world(h)
 	w={}
+
+	-- ceiling, ground
 	w[0] = {}
 	w[h] = {}
 	for i=0,15 do
 	 w[0][i] = w_default_brick
 	 w[h][i] = w_default_brick
 	end
+	
+	-- main shaft
 	for i=1,h-1 do
 	 make_world_row(i)
 	end
+	
+	-- starting platform
+	w[wy + pl_start_y+3] = {}
+	for i=0,6 do
+	 w[wy + pl_start_y+3][i] = w_start_brick
+	end
+
 end
 
 
@@ -792,7 +823,7 @@ __label__
 
 __gff__
 000101010181010001000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000001000000000000000000000c0000040400000000000000000000000000000000000000000000000000000000000c0c00000000000000000001000000000000000001000000
-0000000000000000000001010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000001010001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __sfx__
 000100002e1502e1502f1502f1502f150351503715000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100
 000200002e5502e5503555035550166003a5503a55037500345003350034500385000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500
