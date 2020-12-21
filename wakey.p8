@@ -25,17 +25,17 @@ w = {}
 w_h = 100
 w_default_brick = 59
 w_default_row = {w_default_brick,0,0,0,0,0,0,0,0,0,0,0,0,0,0,w_default_brick}
-w_g_y = 0.1
+w_g_y = 0.1  -- gravity
 
 
 scroll_dy = 0.2
 wdy = 0
 
 default_energy = 1
-default_energy_use = default_energy/4
+default_energy_use = default_energy/3
 min_energy = 1
 low_energy = min_energy * 10
-max_energy = default_energy * 30
+max_energy = default_energy * 20
 
 function _init()
  wy=(w_h/2)
@@ -46,8 +46,8 @@ function _init()
 	pl.dir=r
  pl.state=idle
  pl.frame=1
- pl.inertia=0.5
- --pl.bounce=0.2
+ pl.inertia=0.7
+ pl.bounce=0.1
  pl.energy = 10
 	
 	
@@ -68,14 +68,14 @@ function control_player(pl)
 	pl.state = idle
 
  -- how fast to accelerate
- local accel = 0.1
+ local accel = 0.2
  if btn(⬅️) then
- 	pl.dx -= accel 
+ 	pl.dx -= accel/2 
  	pl.dir = l
  	pl.state = l
  end
  if btn(➡️) then
-  pl.dx += accel 
+  pl.dx += accel/2
  	pl.dir = r
  	pl.state = r
  end
@@ -92,6 +92,7 @@ function control_player(pl)
 	 	pl.dir = t
 	 	pl.energy -= default_energy_use
 	 end --else --'fall'
+ 	--printh("!"..pl.energy)
  end
  if btn(⬇️) then
 	 if pl.energy > min_energy then
@@ -112,6 +113,7 @@ function control_player(pl)
  	pl.energy += default_energy 
 	end
 	if not btn(⬆️) and w_g_y > 0 then
+		--printh("!*"..pl.energy)
  	pl.energy += default_energy 
 	end
 	if pl.energy > max_energy then
@@ -146,7 +148,7 @@ function control_player(pl)
  --end
 
 	-- todo revisit 
-	if pl.dy >0 then
+	if pl.dy >0.1 then
 		solid_pl = solid_a(pl, 0, pl.dy+wdy+w_g_y) 
 		if pl.state != b and pl.state != jump then
 			if not solid_pl then
@@ -329,7 +331,7 @@ function solid(x, y)
  -- grab the cell value
  --val=mget(x, y)
  val=mget(x, y)
-	printh(x..","..y) 
+	--printh(x..","..y) 
  -- check if flag 0 is set (the
  -- red toggle button in the 
  -- sprite editor)
@@ -348,8 +350,8 @@ function solid_area(x,y,w,h)
 	y = y - (ceil(wy)-wy)
  
  if debug then
-		rect(x*8-w*16, y*8-h*16, x*6+w*16, y*8+h*16, 9)
-		printh((x*8-w*16)..","..(y*8-h*16)..","..(x*6+w*16)..","..(y*8+h*16))
+		--rect(x*8-w*16, y*8-h*16, x*6+w*16, y*8+h*16, 9)
+		--printh((x*8-w*16)..","..(y*8-h*16)..","..(x*6+w*16)..","..(y*8+h*16))
 	end
 	
  return 
@@ -418,7 +420,7 @@ function move_actor(a)
  then
   a.x += a.dx
  else   
-  printh(a.dx.." "..a.y)
+  --printh(a.dx.." "..a.y)
   -- otherwise bounce
   a.dx *= -a.bounce
   --sfx(2)
@@ -430,17 +432,20 @@ function move_actor(a)
   a.y += a.dy
 	 -- gravity
  	a.dy += w_g_y
+  --printh(a.dy.."!")
  else
   a.dy *= -a.bounce
   --printh(a.dy.."!")
   --sfx(2)
  end
 
-
+	-- remove
  -- todo player only - or set others' energy high
- if (a.energy < low_energy) then
-	 a.dy *= a.inertia  --i.e. double
-	end
+	-- if (a.energy < low_energy) then
+	--  if a.energy > 0 then
+	--		 a.dy *= a.energy / low_energy  
+	--		end
+	--	end
  
  
  -- apply inertia
