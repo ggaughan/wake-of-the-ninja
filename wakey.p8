@@ -199,37 +199,35 @@ function draw_actor(a)
 	 spr(0,sx,sy,1,1, fx,fy)
 	end
 	
- if debug then
- 	rect(sx+a.dx,sy+0,
-    sx+a.dx + a.w*16,
-    sy+0 + a.h*16, 12) 
-    
- 	rect(sx+0,sy + a.dy + w_g_y,
-    sx+0 + a.w*16,
-    sy+a.dy + w_g_y + a.h*16,10)    
-	end	
+-- if debug then
+-- 	rect(sx+a.dx,sy+0,
+--    sx+a.dx + a.w*16,
+--    sy+0 + a.h*16, 12) 
+--    
+-- 	rect(sx+0,sy + a.dy, --+ w_g_y,
+--    sx+0 + a.w*16,
+--    sy+a.dy + w_g_y + a.h*16,10)    
+--	end	
 end
 
 function _draw()
  cls()
 
-	-- todo allow gap closing in some cases here
+--	wdy = 0
 -- if pl.y < 4.6 then
 --	 if true then --not solid_pl then
---		 wy-=0.2
+--		 wdy-=scroll_dy
 --		 --wy-=(4.6 - pl.y)
 --		end
 --	 pl.y=4.6
 -- elseif pl.y > 8.6 then
 --	 if true then --not solid_pl then
---		 wy+=0.2
+--		 wdy+=scroll_dy
 --		 --wy+=pl.y-8.6
 --		end
 --	 pl.y=8.6
 -- end
-
-
- --wy += wdy
+-- wy += wdy
 
  
  --if pl.y < 4 then
@@ -326,7 +324,8 @@ end
 --actors less than one tile big)
 
 function solid_area(x,y,w,h)
-	if debug then
+ 
+ if debug then
 		rect(x*8-w*16, y*8-h*16, x*6+w*16, y*8+h*16, 9)
 		printh((x*8-w*16)..","..(y*8-h*16)..","..(x*6+w*16)..","..(y*8+h*16))
 	end
