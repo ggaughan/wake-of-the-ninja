@@ -37,7 +37,7 @@ w_g_y = 0.1  -- gravity
 --w_g_y = 0
 
 pl_start_y = 4
-scroll_dy = 0.2
+scroll_dy = 0.3
 --scroll_dy = 0.1
 wdy = 0
 
@@ -236,6 +236,8 @@ function _update()
 
  -- todo skip if not changed
  update_map(wy)
+ 
+ --scroll_tile(10)
 
  foreach(actor, move_actor)
 end
@@ -281,8 +283,12 @@ end
 function _draw()
  cls()
 
+ pal(3,1)  -- blue water (spr 10)
+
 	-- smooth upward scroll by extra top row with -ve offset
  map(0,0,0,-(1-(ceil(wy)-wy))*8,16,17)
+
+ pal()
  
  foreach(actor,draw_actor)
 
@@ -512,7 +518,7 @@ function make_world_row(y)
 --		 w[y][i] = 10
 --		end
 -- end
- 
+
  if rnd() > 0.8 then
   local sp = w_default_brick
   -- ledges
