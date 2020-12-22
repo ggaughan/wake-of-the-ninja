@@ -27,7 +27,7 @@ anim={
 
 actor = {}
 w = {}
-w_h = 100
+w_h = 1000
 w_default_brick = 59
 w_default_row = {w_default_brick,0,0,0,0,0,0,0,0,0,0,0,0,0,0,w_default_brick}
 w_default_row_water = {w_default_brick,10,10,10,10,10,10,10,10,10,10,10,10,10,10,w_default_brick}
@@ -37,15 +37,17 @@ w_g_y = 0.1  -- gravity
 --w_g_y = 0
 
 pl_start_y = 4
-scroll_dy = 0.3
+scroll_dy = 0.2  --note: 0.3 needs better collision resolution
 --scroll_dy = 0.1
 wdy = 0
 
 default_energy = 1
 default_energy_use = default_energy/3
+recharge_factor = 1/0.6 -- key to feel = difficulty level
+default_energy_recharge = default_energy_use * recharge_factor
 min_energy = 1
 low_energy = min_energy * 10
-max_energy = default_energy * 20
+max_energy = default_energy * 30
 
 function _init()
  wy=(w_h/2)
@@ -128,11 +130,11 @@ function control_player(pl)
 	--printh("*"..(pl.y + wy + pl.dy - w_g_y) .."..".. water_level )
 
 	if not btn(⬇️) and in_water then
- 	pl.energy += default_energy 
+ 	pl.energy += default_energy_recharge
 	end
 	if not btn(⬆️) and not in_water then
 		--printh("!*"..pl.energy)
- 	pl.energy += default_energy 
+ 	pl.energy += default_energy_recharge
 	end
 	if pl.energy > max_energy then
 		pl.energy = max_energy
