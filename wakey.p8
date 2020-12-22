@@ -281,9 +281,8 @@ end
 function _draw()
  cls()
 
-	-- smooth upward scroll by separate top row
- map(0,0,0,-(1-(ceil(wy)-wy))*8,16,1)
- map(0,1,0,(ceil(wy)-wy)*8,16,16)
+	-- smooth upward scroll by extra top row with -ve offset
+ map(0,0,0,-(1-(ceil(wy)-wy))*8,16,17)
  
  foreach(actor,draw_actor)
 
