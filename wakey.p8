@@ -30,14 +30,15 @@ w = {}
 w_h = 100
 w_default_brick = 59
 w_default_row = {w_default_brick,0,0,0,0,0,0,0,0,0,0,0,0,0,0,w_default_brick}
+w_default_row_water = {w_default_brick,10,10,10,10,10,10,10,10,10,10,10,10,10,10,w_default_brick}
 w_start_brick = 141
 
---temp:w_g_y = 0.1  -- gravity
-w_g_y = 0
+w_g_y = 0.1  -- gravity
+--w_g_y = 0
 
 pl_start_y = 4
---scroll_dy = 0.2
-scroll_dy = 0.1
+scroll_dy = 0.2
+--scroll_dy = 0.1
 wdy = 0
 
 default_energy = 1
@@ -48,7 +49,7 @@ max_energy = default_energy * 20
 
 function _init()
  wy=(w_h/2)
- water_level = wy + pl_start_y+3
+ water_level = wy + pl_start_y+3 
  wx=0
 	make_world(w_h)
 
@@ -67,6 +68,9 @@ function _init()
 -- ball.dy=0.1
 -- ball.inertia=0.0
 -- -- ball.bounce = 0.8
+	if debug then
+	 printh("mem "..stat(0))  -- in k
+	end
 	
 end
 
@@ -119,7 +123,8 @@ function control_player(pl)
 	 end --else --'fall'
  end
 
-	local in_water = pl.y + wy + pl.dy - w_g_y > water_level 
+	-- note: +1 for smooth top row upward scrolling
+	local in_water = pl.y + wy + pl.dy - w_g_y +1 > water_level 
 	--printh("*"..(pl.y + wy + pl.dy - w_g_y) .."..".. water_level )
 
 	if not btn(⬇️) and in_water then
@@ -204,19 +209,23 @@ function control_player(pl)
 	end
 end
 
-function update_map(cwy)
- for y=-1,16 do 
-		--mset(0,y,1+y%1+(wy%2))
+function update_map(fwy)
+ -- note: extra top row for smooth upward scroll
+ for y=0,16 do  
+		local y_w = ceil(fwy)+y
+		local dr = w_default_row
+	 if y_w > water_level then
+		 dr = w_default_row_water
+	 end	
 		for x=0,15 do
-			if w[ceil(cwy)+y] then
-				--printh(wy+y..","..#w[wy+y])
-				if w[ceil(cwy)+y][wx+x] then
-					mset(x,y,w[ceil(cwy)+y][wx+x])
+			if w[y_w] then
+				if w[y_w][wx+x] then
+					mset(x,y,w[y_w][wx+x])
 				else
-					mset(x,y,w_default_row[x+1])
+					mset(x,y,dr[x+1])
 				end
 			else
-				mset(x,y,w_default_row[x+1])
+				mset(x,y,dr[x+1])
 			end
 		end
 	end
@@ -226,7 +235,6 @@ function _update()
  control_player(pl)
 
  -- todo skip if not changed
- --update_map(ceil(wy))
  update_map(wy)
 
  foreach(actor, move_actor)
@@ -273,57 +281,11 @@ end
 function _draw()
  cls()
 
---	wdy = 0
--- if pl.y < 4.6 then
---	 if true then --not solid_pl then
---		 wdy-=scroll_dy
---		 --wy-=(4.6 - pl.y)
---		end
---	 pl.y=4.6
--- elseif pl.y > 8.6 then
---	 if true then --not solid_pl then
---		 wdy+=scroll_dy
---		 --wy+=pl.y-8.6
---		end
---	 pl.y=8.6
--- end
--- wy += wdy
-
- 
- --if pl.y < 4 then
- --	camera(0,-32)
- --elseif pl.y > 8 then
- --	camera(0,32)
- --end
- -- printh(wy.." "..((wy%8))..","..8-(ceil(wy)-wy)*10)
- --printh(wy..","..pl.y.." "..(wy%8))
-  
- --camera(0, 8-(ceil(wy)-wy)*10)
- --camera(0, wy%8)
-
- --map(0,0,0,ceil((ceil(wy)-wy)*10),16,1)
- 
- --camera(0, -wy%8)
+	-- smooth upward scroll by separate top row
  map(0,0,0,-(1-(ceil(wy)-wy))*8,16,1)
- --camera()
  map(0,1,0,(ceil(wy)-wy)*8,16,16)
-
-
- --map(0,0,0,ceil((ceil(wy)-wy)*10),16,16)
- --map(0,1,0,ceil((ceil(wy)-wy)*10),16,16)
- --map(0,1,0,-wy%8,16,17)
-
- --map(0,0,0,0,16,16)
- --camera()
  
  foreach(actor,draw_actor)
-
- --wy += wdy
---	if wdy < 0 then
---		pl.y = 4.6
---	elseif wdy > 0 then
---		pl.y = 8.6
---	end
 
 	if debug then 
 	 -- no use?:
@@ -409,7 +371,8 @@ end
 
 function solid_area(x,y,w,h)
 
-	--y = y - (ceil(wy)-wy)
+	-- note: +1 for map shift for smooth top row upward scroll
+	y = y + 1 - (ceil(wy)-wy)  
  
  if debug then
 		--rect(x*8-w*16, y*8-h*16, x*6+w*16, y*8+h*16, 9)
@@ -493,7 +456,7 @@ function move_actor(a)
  if not solid_a(a, 0, a.dy) then
   a.y += a.dy
 	 -- gravity
-	 if a.y + wy - 1 > water_level then
+	 if a.y + wy - 1 +1 > water_level then  -- note: +1 for extra row for smooth upward scrolling
 	 	a.dy -= w_g_y
 	 else
 	 	a.dy += w_g_y
@@ -541,15 +504,15 @@ function move_actor(a)
 end
 
 function make_world_row(y)
- if y > water_level then
- 	w[y] = {}
-	 for key, value in pairs(w_default_row) do
-	  w[y][key-1] = value
-		end
- 	for i=1,14 do
-		 w[y][i] = 10
-		end
- end
+-- if y > water_level then
+-- 	w[y] = {}
+--	 for key, value in pairs(w_default_row) do
+--	  w[y][key-1] = value
+--		end
+-- 	for i=1,14 do
+--		 w[y][i] = 10
+--		end
+-- end
  
  if rnd() > 0.8 then
   local sp = w_default_brick
