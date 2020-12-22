@@ -32,10 +32,12 @@ w_default_brick = 59
 w_default_row = {w_default_brick,0,0,0,0,0,0,0,0,0,0,0,0,0,0,w_default_brick}
 w_start_brick = 141
 
-w_g_y = 0.1  -- gravity
+--temp:w_g_y = 0.1  -- gravity
+w_g_y = 0
 
 pl_start_y = 4
-scroll_dy = 0.2
+--scroll_dy = 0.2
+scroll_dy = 0.1
 wdy = 0
 
 default_energy = 1
@@ -118,7 +120,7 @@ function control_player(pl)
  end
 
 	local in_water = pl.y + wy + pl.dy - w_g_y > water_level 
-	printh("*"..(pl.y + wy + pl.dy - w_g_y) .."..".. water_level )
+	--printh("*"..(pl.y + wy + pl.dy - w_g_y) .."..".. water_level )
 
 	if not btn(⬇️) and in_water then
  	pl.energy += default_energy 
@@ -160,8 +162,8 @@ function control_player(pl)
 
 	-- todo revisit 
 	if in_water then
-		printh(pl.dy)
-		if pl.dy > -0.1 then
+		--printh(pl.dy)
+		if pl.dy < -0.1 then
 			solid_pl = solid_a(pl, 0, pl.dy+wdy-w_g_y) 
 			if pl.state != t and pl.state != jump then
 				if not solid_pl then
@@ -203,13 +205,13 @@ function control_player(pl)
 end
 
 function update_map(cwy)
- for y=0,15 do
+ for y=-1,16 do 
 		--mset(0,y,1+y%1+(wy%2))
 		for x=0,15 do
-			if w[cwy+y] then
+			if w[ceil(cwy)+y] then
 				--printh(wy+y..","..#w[wy+y])
-				if w[cwy+y][wx+x] then
-					mset(x,y,w[cwy+y][wx+x])
+				if w[ceil(cwy)+y][wx+x] then
+					mset(x,y,w[ceil(cwy)+y][wx+x])
 				else
 					mset(x,y,w_default_row[x+1])
 				end
@@ -224,7 +226,8 @@ function _update()
  control_player(pl)
 
  -- todo skip if not changed
- update_map(ceil(wy))
+ --update_map(ceil(wy))
+ update_map(wy)
 
  foreach(actor, move_actor)
 end
@@ -292,10 +295,26 @@ function _draw()
  --elseif pl.y > 8 then
  --	camera(0,32)
  --end
- --printh(wy.." "..ceil(wy)-wy)
+ -- printh(wy.." "..((wy%8))..","..8-(ceil(wy)-wy)*10)
+ --printh(wy..","..pl.y.." "..(wy%8))
+  
+ --camera(0, 8-(ceil(wy)-wy)*10)
+ --camera(0, wy%8)
+
+ --map(0,0,0,ceil((ceil(wy)-wy)*10),16,1)
  
- map(0,0,0,ceil((ceil(wy)-wy)*10),16,16)
+ --camera(0, -wy%8)
+ map(0,0,0,-(1-(ceil(wy)-wy))*8,16,1)
+ --camera()
+ map(0,1,0,(ceil(wy)-wy)*8,16,16)
+
+
+ --map(0,0,0,ceil((ceil(wy)-wy)*10),16,16)
+ --map(0,1,0,ceil((ceil(wy)-wy)*10),16,16)
+ --map(0,1,0,-wy%8,16,17)
+
  --map(0,0,0,0,16,16)
+ --camera()
  
  foreach(actor,draw_actor)
 
@@ -371,7 +390,9 @@ function solid(x, y)
 
  -- grab the cell value
  --val=mget(x, y)
+ --camera(0, 8-(ceil(wy)-wy)*10)
  val=mget(x, y)
+ --camera()
 	--printh(x..","..y) 
  -- check if flag 0 is set (the
  -- red toggle button in the 
@@ -388,7 +409,7 @@ end
 
 function solid_area(x,y,w,h)
 
-	y = y - (ceil(wy)-wy)
+	--y = y - (ceil(wy)-wy)
  
  if debug then
 		--rect(x*8-w*16, y*8-h*16, x*6+w*16, y*8+h*16, 9)
