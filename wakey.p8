@@ -6,6 +6,9 @@ __lua__
 debug = true
 
 sound = true
+s_die = 6
+
+die_duration = 60
 
 t,r,b,l="t","r","b","l"
 l_swim="l_swim"
@@ -13,6 +16,7 @@ r_swim="r_swim"
 idle="idle"
 falling="falling"
 jump="jump"
+die="die"
 -- note: animates from ceil(0.1..<#) 
 -- todo pad all > 1 to 4?
 anim={
@@ -25,6 +29,7 @@ anim={
 	l_swim={135,136,137,136},
 	falling={163,164},
 	jump={130},
+	die={132,133,134},
 	
 	["enemy"]={97},
 }
@@ -40,7 +45,7 @@ w_default_row = {w_default_brick,0,0,0,0,0,0,0,0,0,0,0,0,0,0,w_default_brick}
 w_default_row_water = {w_default_brick,10,10,10,10,10,10,10,10,10,10,10,10,10,10,w_default_brick}
 w_start_brick = 141
 
-pl_start_y = 4
+pl_start_y = 7
 scroll_dy = 0.2  --note: 0.3 needs better collision resolution
 --scroll_dy = 0.1
 wdy = 0
@@ -94,65 +99,78 @@ end
 -- update tab
 function control_player(pl)
 
-	pl.state = idle
-
- -- how fast to accelerate
- local accel = 0.2
- if btn(⬅️) then
- 	pl.dx -= accel/2 
- 	pl.dir = l
- 	pl.state = l
- end
- if btn(➡️) then
-  pl.dx += accel/2
- 	pl.dir = r
- 	pl.state = r
- end
- if btn(⬆️) then
-	 if pl.energy > min_energy then
-	  pl.dy -= accel 
-	 	if pl.state != t then
-		 	if pl.dir != t then
-			 	pl.state = jump
-		 	else
-			 	pl.state = t
-		 	end
-		 end
-	 	pl.dir = t
-	 	pl.energy -= default_energy_use
-	 end --else --'fall'
- 	--printh("!"..pl.energy)
- end
- if btn(⬇️) then
-	 if pl.energy > min_energy then
-	  pl.dy += accel 
-	 	if pl.state != b then
-		 	if pl.dir != b then
-			 	pl.state = jump
-		 	else
-			 	pl.state = b
-			 end
-		 end
- 		pl.dir = b
-	 	pl.energy -= default_energy_use
-	 end --else --'fall'
- end
-
 	-- note: +1 for smooth top row upward scrolling
 	local in_water = pl.y + wy + pl.dy - w_g_y +1 > water_level 
 	--printh("*"..(pl.y + wy + pl.dy - w_g_y) .."..".. water_level )
 
-	if not btn(⬇️) and in_water then
- 	pl.energy += default_energy_recharge
-	end
-	if not btn(⬆️) and not in_water then
-		--printh("!*"..pl.energy)
- 	pl.energy += default_energy_recharge
-	end
-	if pl.energy > max_energy then
-		pl.energy = max_energy
-	end
-
+	if pl.state == die then
+	 -- note: dying - no control and no recovery
+		if pl.t > die_duration then
+		 -- reset for next time
+		 -- todo move to new_life
+		 -- todo play sound
+		 -- todo maybe location reset? or is fall enough?
+			pl.state = idle
+		end
+	else
+		-- we are alive and have control
+		pl.state = idle	
+	
+	 -- how fast to accelerate
+	 local accel = 0.2
+	 if btn(⬅️) then
+	 	pl.dx -= accel/2 
+	 	pl.dir = l
+	 	pl.state = l
+	 end
+	 if btn(➡️) then
+	  pl.dx += accel/2
+	 	pl.dir = r
+	 	pl.state = r
+	 end
+	 if btn(⬆️) then
+		 if pl.energy > min_energy then
+		  pl.dy -= accel 
+		 	if pl.state != t then
+			 	if pl.dir != t then
+				 	pl.state = jump
+			 	else
+				 	pl.state = t
+			 	end
+			 end
+		 	pl.dir = t
+		 	pl.energy -= default_energy_use
+		 end --else --'fall'
+	 	--printh("!"..pl.energy)
+	 end
+	 if btn(⬇️) then
+		 if pl.energy > min_energy then
+		  pl.dy += accel 
+		 	if pl.state != b then
+			 	if pl.dir != b then
+				 	pl.state = jump
+			 	else
+				 	pl.state = b
+				 end
+			 end
+	 		pl.dir = b
+		 	pl.energy -= default_energy_use
+		 end --else --'fall'
+	 end
+	
+	
+		if not btn(⬇️) and in_water then
+	 	pl.energy += default_energy_recharge
+		end
+		if not btn(⬆️) and not in_water then
+			--printh("!*"..pl.energy)
+	 	pl.energy += default_energy_recharge
+		end
+		if pl.energy > max_energy then
+			pl.energy = max_energy
+		end
+ end
+ 
 	-- todo move to _draw?
 	wdy = 0
  if pl.y < 4.6 then
@@ -191,7 +209,7 @@ function control_player(pl)
 			--solid_pl = solid_a(pl, 0, pl.dy+wdy-w_g_y) 
 			solid_pl = solid_a(pl, 0, pl.dy-w_g_y) 
 			if pl.state != t and pl.state != jump then
-				if not solid_pl then
+				if not solid_pl and pl.state != die then
 				 pl.state = falling
 				end
 			end
@@ -201,7 +219,7 @@ function control_player(pl)
 			--solid_pl = solid_a(pl, 0, pl.dy+wdy+w_g_y) 
 			solid_pl = solid_a(pl, 0, pl.dy+w_g_y) 
 			if pl.state != b and pl.state != jump then
-				if not solid_pl then
+				if not solid_pl and pl.state != die then
 				 pl.state = falling
 				end
 			end
@@ -221,7 +239,7 @@ function control_player(pl)
  
 
 	-- todo move to _draw?
-	if pl.state == idle then
+	if pl.state == idle or pl.state == die then
 	 pl.frame += 0.1
 
 		if pl.frame >= #anim[pl.state] then
@@ -331,10 +349,9 @@ function _draw()
 	 print("y "..pl.y,48,120,7)
 	 print("wy "..wy,90,120,7)
 
-		--print("c "..ceil((ceil(wy)-wy)*10), 10,1,7)
-		print("c "..ceil(wy)-wy, 10,1,7)
+		--print("c "..ceil(wy)-wy, 10,1,7)
 	 
-	 --print("m "..stat(0),90,1,7)  -- in k
+	 print("t "..pl.t,40,1,7)  -- in k
 	 print("e "..pl.energy,90,1,7)  -- in k
  end
 end
@@ -427,6 +444,10 @@ end
 function solid_actor(a, dx, dy)
  for a2 in all(actor) do
   if a2 != a then
+  	-- todo perhaps skip if both mass==0 (i.e. enemy + enemy pass through)
+  	-- todo or, just don't call if mass==0 and pl must test enemy hits
+  	--        so then if a=pl and a2=enemy = simple?
+  
    local x=(a.x+dx) - a2.x
    local y=(a.y+dy) - a2.y
    if ((abs(x) < (a.w+a2.w)) and
@@ -442,6 +463,15 @@ function solid_actor(a, dx, dy)
      v=a.dx + a2.dy
      a.dx = v/2
      a2.dx = v/2
+     if a==pl and pl.state!=die and is_enemy(a2) then
+      if (sound) sfx(s_die)
+      pl.state=die
+      pl.dy=0
+      pl.t=0
+      pl.energy=0
+      a2.y=-1  -- kill
+     	printh("die")    	
+	    end
      return true 
     end
     
@@ -450,6 +480,15 @@ function solid_actor(a, dx, dy)
      v=a.dy + a2.dy
      a.dy=v/2
      a2.dy=v/2
+     if a==pl and pl.state!=die and is_enemy(a2) then
+      if (sound) sfx(s_die)
+      pl.state=die
+      pl.t=0
+      pl.dy=0
+      pl.energy=0
+      a2.y=-1  -- kill
+     	printh("die")    	
+	    end
      return true 
     end
     
@@ -464,10 +503,13 @@ end
 
 -- checks both walls and actors
 function solid_a(a, dx, dy)
- if a.mass > 0 and solid_area(a.x+dx,a.y+dy,a.w,a.h) then
-  return true 
+ if a.mass > 0 then
+  if solid_area(a.x+dx,a.y+dy,a.w,a.h) then
+	  return true 
+	 end
+ 	return solid_actor(a, dx, dy) 
  end
- return solid_actor(a, dx, dy) 
+ return false
 end
 
 function move_actor(a)
@@ -623,7 +665,7 @@ function spawn_enemies()
 		local in_water = pl.y + wy + pl.dy - w_g_y +1 > water_level 
  
 		if rnd() > 0.99 then
-		 x = rnd(13) + 1
+		 x = flr(rnd(13)) + 1.5  -- i.e. in lanes (so player can hide at edges)
 			e = make_enemy(x, -1)
 		 if in_water then
 			 e.y = 0
@@ -633,7 +675,7 @@ function spawn_enemies()
 				e.dy -= accel 
 			end
 			add(enemy, e)
-			if (debug)	printh("add "..e.dy.." "..e.mass)
+			if (debug)	printh("add "..e.dy.." "..e.x.." "..e.mass)
 		end
 	end
 end
@@ -650,7 +692,9 @@ function purge_enemies()
 	end
 end
 
-
+function is_enemy(a)
+	return a.mass == 0 -- for now
+end
 __gfx__
 00012000606660666066606660666066606660666066606616666661feeeeee87bbbbbb30000004000000030000300000b0dd030777777674f9f4fff7999a999
 07d1257000000000000000000000000000000000007777006d6666d6e8888882b3333331040000000300000003000030d3000b0d76777777fffff9f49999979a
