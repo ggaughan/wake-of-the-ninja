@@ -22,10 +22,15 @@ anim={
 	r_swim={135,136,137,136},
 	l_swim={135,136,137,136},
 	falling={163,164},
-	jump={130}
+	jump={130},
+	
+	["enemy"]={97},
 }
 
-actor = {}
+actor = {} --all actors in world
+enemy = {} --all active enemies (links to actor)
+enemy_limit = 3
+
 w = {}
 w_h = 1000
 w_default_brick = 59
@@ -33,13 +38,12 @@ w_default_row = {w_default_brick,0,0,0,0,0,0,0,0,0,0,0,0,0,0,w_default_brick}
 w_default_row_water = {w_default_brick,10,10,10,10,10,10,10,10,10,10,10,10,10,10,w_default_brick}
 w_start_brick = 141
 
-w_g_y = 0.1  -- gravity
---w_g_y = 0
-
 pl_start_y = 4
 scroll_dy = 0.2  --note: 0.3 needs better collision resolution
 --scroll_dy = 0.1
 wdy = 0
+
+last_ledge = 0
 
 default_energy = 1
 default_energy_use = default_energy/3
@@ -47,7 +51,13 @@ recharge_factor = 1/0.6 -- key to feel = difficulty level
 default_energy_recharge = default_energy_use * recharge_factor
 min_energy = 1
 low_energy = min_energy * 10
-max_energy = default_energy * 30
+max_energy_factor = 30
+max_energy = default_energy * max_energy_factor
+
+w_g_y = 0.1  -- gravity
+--w_g_y = 0
+max_ledge_gap = max_energy_factor
+
 
 function _init()
  wy=(w_h/2)
@@ -140,8 +150,7 @@ function control_player(pl)
 		pl.energy = max_energy
 	end
 
-	-- todo move to _draw
-	-- todo allow gap closing in some cases here
+	-- todo move to _draw?
 	wdy = 0
  if pl.y < 4.6 then
 	 if true then --not solid_pl then
@@ -156,8 +165,13 @@ function control_player(pl)
 		end
 	 pl.y=8.6
  end
+ -- todo move_camera(wdy)
  wy += wdy
- -- todo end
+ -- shift everything else to suit
+ for a in all(actor) do
+ 	a.y -= wdy
+ end
+ -- todo end move_camera
 
  -- play a sound if moving
  -- (every 4 ticks)
@@ -171,7 +185,8 @@ function control_player(pl)
 	if in_water then
 		--printh(pl.dy)
 		if pl.dy < -0.1 then
-			solid_pl = solid_a(pl, 0, pl.dy+wdy-w_g_y) 
+			--solid_pl = solid_a(pl, 0, pl.dy+wdy-w_g_y) 
+			solid_pl = solid_a(pl, 0, pl.dy-w_g_y) 
 			if pl.state != t and pl.state != jump then
 				if not solid_pl then
 				 pl.state = falling
@@ -180,7 +195,8 @@ function control_player(pl)
 		end
 	else
 		if pl.dy > 0.1 then
-			solid_pl = solid_a(pl, 0, pl.dy+wdy+w_g_y) 
+			--solid_pl = solid_a(pl, 0, pl.dy+wdy+w_g_y) 
+			solid_pl = solid_a(pl, 0, pl.dy+w_g_y) 
 			if pl.state != b and pl.state != jump then
 				if not solid_pl then
 				 pl.state = falling
@@ -211,10 +227,16 @@ function control_player(pl)
 	end
 end
 
-function update_map(fwy)
+function update_enemies()
+	for e in all(enemy) do
+	  -- note: mostly done by move_actor
+	end
+end
+
+function update_map()
  -- note: extra top row for smooth upward scroll
  for y=0,16 do  
-		local y_w = ceil(fwy)+y
+		local y_w = ceil(wy)+y
 		local dr = w_default_row
 	 if y_w > water_level then
 		 dr = w_default_row_water
@@ -235,11 +257,15 @@ end
 
 function _update()
  control_player(pl)
+ update_enemies()
 
  -- todo skip if not changed
- update_map(wy)
+ update_map()
  
  --scroll_tile(10)
+ 
+ purge_enemies()
+ spawn_enemies()
 
  foreach(actor, move_actor)
 end
@@ -318,8 +344,6 @@ end
 -- wall and actor collisions
 -- by zep
 
-actor = {} --all actors in world
-
 -- make an actor
 -- and add to global collection
 -- x,y means center of the actor
@@ -330,6 +354,7 @@ function make_actor(x, y)
  a.y = y
  a.dx = 0
  a.dy = 0
+ a.mass = 1
  a.dir = t
  --a.spr = 16
  a.state = nil
@@ -436,9 +461,9 @@ end
 
 -- checks both walls and actors
 function solid_a(a, dx, dy)
- if solid_area(a.x+dx,a.y+dy,
-    a.w,a.h) then
-    return true end
+ if a.mass > 0 and solid_area(a.x+dx,a.y+dy,a.w,a.h) then
+  return true 
+ end
  return solid_actor(a, dx, dy) 
 end
 
@@ -447,49 +472,40 @@ function move_actor(a)
  -- only move actor along x
  -- if the resulting position
  -- will not overlap with a wall
-
  if not solid_a(a, a.dx, 0) 
  then
   a.x += a.dx
  else   
   --printh(a.dx.." "..a.y)
   -- otherwise bounce
-  a.dx *= -a.bounce
+  a.dx *= -a.bounce 
   --sfx(2)
  end
 
  -- ditto for y
-
  if not solid_a(a, 0, a.dy) then
   a.y += a.dy
 	 -- gravity
 	 if a.y + wy - 1 +1 > water_level then  -- note: +1 for extra row for smooth upward scrolling
-	 	a.dy -= w_g_y
+	 	a.dy -= w_g_y * a.mass
 	 else
-	 	a.dy += w_g_y
+	 	a.dy += w_g_y * a.mass
 	 end
   --printh(a.dy.."!")
  else
-  a.dy *= -a.bounce
+  a.dy *= -a.bounce 
   --printh(a.dy.."!")
   --sfx(2)
  end
 
-	-- remove
- -- todo player only - or set others' energy high
-	-- if (a.energy < low_energy) then
-	--  if a.energy > 0 then
-	--		 a.dy *= a.energy / low_energy  
-	--		end
-	--	end
- 
- 
  -- apply inertia
  -- set dx,dy to zero if you
  -- don't want inertia
  
  a.dx *= a.inertia
  a.dy *= a.inertia
+ 
+ --printh(a.dy.." "..a.y)
  
  -- advance one frame every
  -- time actor moves 1/4 of
@@ -505,40 +521,35 @@ function move_actor(a)
 		end
 	end
  
-
  a.t += 1
  
 end
 
 function make_world_row(y)
--- if y > water_level then
--- 	w[y] = {}
---	 for key, value in pairs(w_default_row) do
---	  w[y][key-1] = value
---		end
--- 	for i=1,14 do
---		 w[y][i] = 10
---		end
--- end
-
- if rnd() > 0.8 then
+ local need = abs(last_ledge - y) > max_ledge_gap
+ if need or rnd() > 0.8 then
   local sp = w_default_brick
   -- ledges
 	 if y > water_level+1 or y < water_level-4 then
-		 if rnd() > 0.5 then
+	  -- tood: double-check need: add factor based on recharge_factor to max_ledge_gap
+		 if need or rnd() > 0.5 then
 		  if w[y] == nil then
 		   w[y] = {}
 		  end
-		 	for i=0,rnd(6) do
+		 	for i=0,rnd(3)+1 do
 				 w[y][flr(i)] = sp
+			  need = false
+				 last_ledge = y
 				end
 			end
-		 if rnd() > 0.5 then
+		 if need or rnd() > 0.5 then
 		  if w[y] == nil then
 		   w[y] = {}
 		  end
-		 	for i=0,rnd(6) do
+		 	for i=0,rnd(3)+1 do
 				 w[y][15-flr(i)] = sp
+ 		  need = false
+				 last_ledge = y
 				end
 			end
 		-- else player start drop area
@@ -549,12 +560,11 @@ end
 function make_world(h)
 	w={}
 
-	-- ceiling, ground
 	w[0] = {}
 	w[h] = {}
 	for i=0,15 do
-	 w[0][i] = w_default_brick
-	 w[h][i] = w_default_brick
+	 w[0][i] = w_default_brick  -- ceiling
+	 w[h][i] = w_default_brick  -- floor
 	end
 	
 	-- main shaft
@@ -593,6 +603,49 @@ function scroll_tile(_tile)
  --now put bottom row on top!
  poke4(spritestart+(startrow*sheetwidth*8)+startcol*spritewide,temp) 
 end 
+
+function make_enemy(x, y)
+	e = make_actor(x, y)
+	e.state="enemy"
+	e.frame=1
+	e.mass = 0.0
+	e.inertia = 1.0
+	e.bounce = -1.0
+	return e
+end
+
+function spawn_enemies()
+ if #enemy < enemy_limit then
+	 local accel = 0.2
+		local in_water = pl.y + wy + pl.dy - w_g_y +1 > water_level 
+ 
+		if rnd() > 0.99 then
+		 x = rnd(13) + 1
+			e = make_enemy(x, -1)
+		 if in_water then
+			 e.y = 0
+				e.dy += accel 
+			else
+			 e.y = 15 
+				e.dy -= accel 
+			end
+			add(enemy, e)
+			if (debug)	printh("add "..e.dy.." "..e.mass)
+		end
+	end
+end
+
+function purge_enemies()
+	for e in all(enemy) do
+		-- todo add slack / keep some
+		--      and/or add timer deaths
+		if e.y < 0 or e.y > 15 then
+		 printh("purge "..e.y)
+		 del(actor, e)
+			del(enemy, e)
+		end
+	end
+end
 
 
 __gfx__
