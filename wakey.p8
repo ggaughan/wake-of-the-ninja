@@ -42,6 +42,7 @@ w = {}
 w_h = 1000
 w_default_brick = 59
 w_default_row = {w_default_brick,0,0,0,0,0,0,0,0,0,0,0,0,0,0,w_default_brick}
+w_water_brick=10
 w_default_row_water = {w_default_brick,10,10,10,10,10,10,10,10,10,10,10,10,10,10,w_default_brick}
 w_start_brick = 141
 
@@ -367,6 +368,9 @@ function _draw()
 	 
 	 print("t "..pl.t,40,1,7)  -- in k
 	 print("e "..pl.energy,90,1,7)  -- in k
+
+	 local wly = (water_level - wy) *8 
+	 line(0, wly, 127, wly, 11)  
  end
 end
 
@@ -602,7 +606,9 @@ function player_move_room()
 			printh("!"..y.." "..flr(y))
 			printh(w[flr(y)])
 			local x = pl.x
- 		pl.room_old_y = pl.y
+			local scroll_y = (14.5-pl.y)
+ 		--pl.room_old_y = pl.y
+			pl.room_old_y = scroll_y
 			if pl.x < 0.5 then
 				pl.room = w[flr(y)][-1]
 				x = 15.5
@@ -615,6 +621,8 @@ function player_move_room()
 				printh("!"..pl.room[1])
 				printh("!"..pl.room[2])
 				pl.y = 14.5  
+				wy -= scroll_y
+				--pl.y = 14.5  
 				pl.x = x
 			else
 				assert(false, "expected a room at "..flr(y))
@@ -630,7 +638,8 @@ function player_move_room()
 				x = 0.5
 			end
 			if pl.room == nil then
-				pl.y = pl.room_old_y
+				pl.y -= pl.room_old_y
+				wy += pl.room_old_y
 				pl.x = x
 			else
 				assert(false, "expected a shaft at "..pl.x)
@@ -655,7 +664,8 @@ function make_world_row(y)
 			  need = false
 				 last_ledge = y
 				end
-				if rnd() > 0.5 and y >480 and y<520 then
+				--if rnd() > 0.5 then
+				if y >510 then
 					if #rooms > 0 then
 					 -- todo move to function and call on rhs too
 						local r = rooms[#rooms]
@@ -666,7 +676,19 @@ function make_world_row(y)
 				  end
 						w[y-1][0] = (y > water_level+1) and 10 or 0
 						w[y-1][-1] = r
-						mset(r[1]+15,r[2]+14,0)  -- means we can't re-use (unless we dynamically add/remove when entering)
+						-- modify room to suit: means we can't re-use (unless we dynamically add/remove when entering)
+						mset(r[1]+15,r[2]+14,0)  
+						-- add water if necessary
+						for iw=0,14 do
+							if y-iw > water_level then
+								for ix=1,15 do
+								 local s = mget(r[1]+ix,r[2]+15-iw) 
+									if s==0 then
+										mset(r[1]+ix,r[2]+15-iw,w_water_brick)
+									end
+								end
+							end
+						end
 						printh("add l room "..(y-1).." "..tostr(w[y-1][-1]))
 						-- todo prevent another ledge from blocking the entrance
 					end
