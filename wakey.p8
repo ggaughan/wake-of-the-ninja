@@ -40,6 +40,8 @@ enemy_limit = 3
 
 w = {}
 w_h = 1000
+level_size = w_h / 10
+level_points = 100
 w_default_brick = 59
 w_default_row = {w_default_brick,0,0,0,0,0,0,0,0,0,0,0,0,0,0,w_default_brick}
 w_water_brick=10
@@ -47,6 +49,10 @@ w_default_row_water = {w_default_brick,10,10,10,10,10,10,10,10,10,10,10,10,10,10
 w_start_brick = 141
 
 pl_start_y = 7
+highest=0
+lowest=0
+points=0
+enemy_kill=2
 wake_max=16
 wake = {}
 for i=1,wake_max do
@@ -70,7 +76,7 @@ recharge_factor = 1/0.6 -- key to feel = difficulty level
 default_energy_recharge = default_energy_use * recharge_factor
 min_energy = 1
 low_energy = min_energy * 10
-max_energy_factor = 30
+max_energy_factor = 40
 max_energy = default_energy * max_energy_factor
 
 w_g_y = 0.1  -- gravity
@@ -80,6 +86,8 @@ max_ledge_gap = max_energy_factor
 
 function _init()
  wy=(w_h/2)
+ highest=wy
+ lowest=wy
  water_level = wy + pl_start_y+3 
  room_range_start = w_h/3
 	room_range_end = (w_h - w_h/3)
@@ -289,6 +297,15 @@ function control_player(pl)
 		end
 	end
  
+	if pl.y+wy < highest - level_size then
+	 points+=level_points
+	 if (sound) sfx(12)
+	 highest = pl.y+wy 
+	elseif pl.y+wy > lowest + level_size then
+	 points+=level_points
+	 if (sound) sfx(12)
+	 lowest = pl.y+wy
+	end
 
 	-- todo move to _draw?
 	if pl.state == idle or pl.state == die then
@@ -422,7 +439,9 @@ function draw_wake()
 	   if ((abs(x) < (ow*2+e.w)) and
 	      (abs(y) < (oh*2+e.h)))
 	   then 
-	    printh("k:"..e.y)
+	    --printh("k:"..e.y)
+     points+=enemy_kill
+				 if (sound) sfx(2)
      e.y=-1  -- kill
 	   end	
 			end
@@ -449,6 +468,8 @@ function _draw()
  foreach(actor,draw_actor)
  draw_wake()
 
+ print("score "..points,30,1,7)  -- in k
+
 	if debug then 
 	 -- no use?:
 	 --local _test_y = solid_a(pl, 0, pl.dy) 
@@ -459,7 +480,7 @@ function _draw()
 
 		--print("c "..ceil(wy)-wy, 10,1,7)
 	 
-	 print("t "..pl.t,40,1,7)  -- in k
+	 print("t "..pl.t,0,1,7)  -- in k
 	 print("e "..pl.energy,90,1,7)  -- in k
 
 	 local wly = (water_level - wy) *8 
@@ -591,6 +612,8 @@ function solid_actor(a, dx, dy)
       pl.t=0
       pl.energy=0
       a2.y=-1  -- kill
+      points+=enemy_kill
+					 if (sound) sfx(2)
 						for i=1,wake_max do
 							wake[i]={-1,-1,-1}
 						end
@@ -612,6 +635,8 @@ function solid_actor(a, dx, dy)
       pl.dy=0
       pl.energy=0
       a2.y=-1  -- kill
+      points+=enemy_kill
+					 if (sound) sfx(2)
 						for i=1,wake_max do
 							wake[i]={-1,-1,-1}
 						end
@@ -714,7 +739,10 @@ function player_move_room()
 				x = 0.5
 			end
 			if pl.room != nil then
-		  -- todo clear enemies
+				for e in all(enemy) do
+				  -- no points
+	     e.y=-1  -- kill
+				end
 				--printh(">"..pl.y.." "..scroll_y)
 				pl.y += scroll_y
 				wy -= scroll_y
