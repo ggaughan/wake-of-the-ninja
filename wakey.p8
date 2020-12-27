@@ -47,6 +47,16 @@ w_default_row_water = {w_default_brick,10,10,10,10,10,10,10,10,10,10,10,10,10,10
 w_start_brick = 141
 
 pl_start_y = 7
+wake_max=6
+wake = {}
+for i=1,wake_max do
+	wake[i]={-1,-1,-1}
+end
+wake_last=0
+-- todo remove wake_last_y = 0
+wake_start=0
+wake[wake_start]={-1,-1,-1}
+wake_decay = 16
 scroll_dy = 0.2  --note: 0.3 needs better collision resolution
 --scroll_dy = 0.1
 wdy = 0
@@ -120,6 +130,34 @@ function control_player(pl)
 	else
 		-- we are alive and have control
 		pl.state = idle	
+
+		if btn(❎) and pl.energy > min_energy then
+			if (pl.dy < 0 and btn(⬆️)) or (pl.dy > 0 and btn(⬇️)) then
+				wake_last += 1
+				if (wake_last > wake_max) wake_last = 1
+				if pl.dy < 0 then
+					wake[wake_last] = {pl.x,pl.y+0.5,pl.t}
+				else
+					wake[wake_last] = {pl.x,pl.y-1.5,pl.t}
+				end
+				--if btnp(❎) then
+				if wake_start == 0 then
+					wake_start=wake_last
+				end
+				printh("w "..wake_start.." "..wake_last.." "..wake[wake_last][1]..","..wake[wake_last][2])
+			end
+		else
+				--if wake_start != 0 then
+				if wake_last != 0 then
+					--wake_start=0
+					wake_last += 1
+					if (wake_last > wake_max) wake_last = 1
+			  wake[wake_last] = {-1,-1,-1}
+			  wake_last = 0
+				 printh("wend ")
+			 end
+		end
+		--todo remove wake_last_y = pl.y+wy
 	
 	 -- how fast to accelerate
 	 local accel = 0.2
@@ -197,6 +235,9 @@ function control_player(pl)
 	 -- shift everything else to suit
 	 for a in all(actor) do
 	 	a.y -= wdy
+	 end
+	 for a in all(wake) do
+	 	a[2] -= wdy
 	 end
 	 -- todo end move_camera
 	-- else in a fixed room
@@ -342,6 +383,32 @@ function draw_actor(a)
 --	end	
 end
 
+function draw_wake()
+	--todo remove local in_water = pl.y + wy + pl.dy - w_g_y +1 > water_level 
+	for i=1,wake_max do
+		local wki = wake_start + i
+		if (wki > wake_max) wki = wki-wake_max
+		local wk = wake[wki]
+		if (wk[1] == -1) break
+		printh("wd".." "..wake_start.." "..i..":"..wki..":"..wk[1]..","..wk[2].."-"..wk[3])
+		if pl.t - wk[3] < wake_decay then
+			--local oy = (wk[2] * 8) + 4 + ((wk[2]>pl.y) and i*4 or -i*4)
+			local oy = (wk[2] * 8) + 4 
+			local ow = ((pl.t-wk[3])/4)*2 * 4
+			local oh = ((pl.t-wk[3])/3)
+			--local ow = i * 4
+			--local oh = i  
+			local ox = wk[1] * 8 
+	  fillp(0b0011001111001100.1)
+	  printh("  "..ox-ow..","..oy-oh..","..ox+ow..","..oy+oh)
+	  local c = pl.t - wk[3] 
+	  ovalfill(ox-ow,oy-oh,ox+ow,oy+oh, c%8)
+	  fillp()
+	 -- else don't draw old ones
+	 end
+	end
+end
+
 function _draw()
  cls()
 
@@ -357,6 +424,7 @@ function _draw()
  pal()
  
  foreach(actor,draw_actor)
+ draw_wake()
 
 	if debug then 
 	 -- no use?:
@@ -500,6 +568,10 @@ function solid_actor(a, dx, dy)
       pl.t=0
       pl.energy=0
       a2.y=-1  -- kill
+						for i=1,wake_max do
+							wake[i]={-1,-1,-1}
+						end
+					 printh("wend die x")
      	printh("die")    	
 	    end
      return true 
@@ -517,6 +589,10 @@ function solid_actor(a, dx, dy)
       pl.dy=0
       pl.energy=0
       a2.y=-1  -- kill
+						for i=1,wake_max do
+							wake[i]={-1,-1,-1}
+						end
+					 printh("wend die y")
      	printh("die")    	
 	    end
      return true 
@@ -828,6 +904,7 @@ function scroll_tile(_tile)
  --now put bottom row on top!
  poke4(spritestart+(startrow*sheetwidth*8)+startcol*spritewide,temp) 
 end 
+
 
 
 __gfx__
