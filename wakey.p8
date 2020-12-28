@@ -370,7 +370,9 @@ function update_map()
 	  			if durer_keys[key] or pl.keys[key] then
 							local y_w = ceil(wy)
 	  				-- hide: already picked up
-	  				local replace = y_w - yy > water_level and w_water_brick or 0
+	  				--local replace = y_w - yy > water_level and w_water_brick or 0
+	  				local replace = y_w + yy > water_level +1 and w_water_brick or 0
+	  				--printh(replace.." "..y_w.."+"..yy.." "..water_level+1)
 			 			mset(rx+xx,ry+yy, replace)
 			 			mset(rx+xx+1,ry+yy, replace)
 		  			mset(rx+xx+2,ry+yy, replace)
