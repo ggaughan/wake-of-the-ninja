@@ -38,6 +38,8 @@ actor = {} --all actors in world
 enemy = {} --all active enemies (links to actor)
 enemy_limit = 3
 
+key_homes = {{12,10},{9,4},{6,4},{3,10},{3,6},{6,8},{9,8},{12,6},{3,8},{6,6},{9,6},{12,8},{12,4},{9,10},{6,10},{3,4}}
+
 w = {}
 w_h = 1000
 level_size = w_h / 10
@@ -105,8 +107,13 @@ function _init()
  pl.inertia=0.82
  pl.bounce=0.07
  pl.energy = max_energy
+ pl.lives = 3
  
  pl.room = nil
+	pl.keys = {false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false}
+	pl.key_count = 0
+	--pl.keys = {true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,}
+	durer_keys = {false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false}
  
 	if debug then
 	 printh("mem "..stat(0))  -- in k
@@ -341,6 +348,29 @@ function update_map()
 				end
 			end
 		end
+	else
+	 local rx=pl.room[1]
+	 local ry=pl.room[2]
+	 -- todo skip if already done?
+	 -- hide keys already collected
+	 for xx=0,15 do
+	 	for yy=0,15 do
+	 		if mget(rx+xx,ry+yy) == 30 then --key
+	 			-- note: +2 digits to right
+	 			local key = get_key_from_map(rx+xx+1,ry+yy)
+	 			if key != nil then
+	 				--printh("k="..key)
+	  			if durer_keys[key] or pl.keys[key] then
+	  				-- hide: already picked up
+			 			mset(rx+xx,ry+yy, 0)
+			 			mset(rx+xx+1,ry+yy, 0)
+		  			mset(rx+xx+2,ry+yy, 0)
+		  		end  
+		  	-- todo assert: key number expected alongside key
+	  		end
+	 		end
+	 	end
+	 end
 	end
 end
 
@@ -369,6 +399,11 @@ function _update_game()
  foreach(actor, move_actor)
  
  player_move_room()
+ if is_complete() then
+ 	-- assert now in durer room
+	 -- todo: go to complete mode
+ 	--rect((6+3)*8,(10)*8, (6+3+2)*8,(11)*8-1, 10)
+	end
 end
 
 
@@ -476,24 +511,46 @@ function _draw_intro()
 	end
 end
 
+function get_key_from_map(x,y)
+	local d1 = mget(x,y)
+	local d2 = mget(x+1,y)
+	local n = 0
+	if d1==209 then
+		n += 10
+	else
+		assert(d==192)
+	end
+	assert(d2>=208 and d2 <=217)
+ n += d2 - 208
+	return n
+end
+
+function place_key_home(n, yoff)
+ local kh = key_homes[n]
+ local d1 = n > 9 and 209 or 192
+ local d2 = (n % 10) + 208
+ mset(kh[1],yoff+kh[2],d1)   
+	mset(kh[1]+1,yoff+kh[2],d2)
+end
+
 function draw_room()
  pal(3,1)  -- blue water (spr 10)
 	if pl.room == nil then
 		-- smooth upward scroll by extra top row with -ve offset
 	 map(0,0,0,-(1-(ceil(wy)-wy))*8,16,17)
 	else
-	 if pl.room[1] == 0 and pl.room[2]==16 then
+	 local rx=pl.room[1]
+	 local ry=pl.room[2]
+	 if rx == 0 and ry==16 then
 	  -- key room
 	  palt(5,true) -- no shadow
-		 mset(6,16+10,209)   -- key 15
- 		mset(7,16+10,213)
-		 mset(6+3,16+10,209) -- key 14
- 		mset(7+3,16+10,212)
-		 map(pl.room[1],pl.room[2],0,0,16,16)
+	  for key,got in pairs(durer_keys) do
+		  if (got) place_key_home(key, ry)
+	 	end
+		 map(rx,ry,0,0,16,16)
  		palt()
-	 	map(pl.room[1],pl.room[2]+15,0,0,16,1)  -- top row (since scrolling map 0,0 takes this)
 
-	 	--rect((6+3)*8,(10)*8, (6+3+2)*8,(11)*8-1, 10)
+	 	map(rx,ry+15,0,0,16,1)  -- top row (since scrolling map 0,0 takes this)
 
 			-- title
 	 	rectfill(40,7, 88, 17, 0)
@@ -518,9 +575,15 @@ function _draw_game()
  foreach(actor,draw_actor)
  draw_wake()
 
- print("score "..points,30,1,7)  -- in k
+	spr(30, 10,0)
+	print(pl.key_count, 17,1,7)
 
- print("e ",90,1,7)  
+ print("score:"..points,26,1,7)  -- in k
+
+	spr(64, 74,0)
+	print(pl.lives, 82,1,7)
+
+ print("e",92,1,7)  
  rectfill(96,1, 96+22,4, 5)
  rectfill(96,2, 96+(pl.energy/max_energy)*22,3, pl.energy < low_energy and 8 or 9)
 
@@ -535,7 +598,7 @@ function _draw_game()
 
 		--print("c "..ceil(wy)-wy, 10,1,7)
 	 
-	 print("t "..pl.t,0,1,7)  -- in k
+	 print("t "..pl.t,0,9,7)  -- in k
 	 --print("e "..pl.energy,90,8,7)  -- in k
 
 	 local wly = (water_level - wy) *8 
@@ -596,8 +659,30 @@ function solid(x, y)
 	 val=mget(x, y)
 	else
 		-- offset to a room
+	 local rx=pl.room[1]
+	 local ry=pl.room[2]	
 		-- note: -y to not skip top row
-	 val=mget(x + pl.room[1], y + pl.room[2] -1)
+	 val=mget(x + rx, y + ry -1)
+	 
+	 local key = nil
+		if val == 30 then --key
+			-- note: +2 digits to right
+			key = get_key_from_map(rx+x+1,ry+y -1)
+		end
+		
+		if key != nil then
+			printh("k="..key)
+			assert(not(durer_keys[key] or pl.keys[key]))
+			-- hide: pick up
+			pl.keys[key] = true
+			pl.key_count += 1
+			if (sound) sfx(10)
+			mset(rx+x,ry+y-1, 0)
+			mset(rx+x+1,ry+y-1, 0)
+			mset(rx+x+2,ry+y-1, 0)
+ 		-- todo assert: key number expected alongside key
+		end
+	 
 	end
  --camera()
 	--printh(x..","..y) 
@@ -778,6 +863,34 @@ function move_actor(a)
  a.t += 1
 end
 
+function is_complete()
+	-- returns true if complete now
+
+	-- do we have all the keys?
+ local	complete = true
+	for got in all(durer_keys) do
+		if not got then
+			complete = false
+			break
+		end
+	end
+	
+	return complete
+end
+
+function enter_durer()
+ -- does player have any new keys to add?
+	for key, got in pairs(pl.keys) do
+		if got then
+		 -- move to this room
+			durer_keys[key] = true
+			pl.keys[key] = false
+			pl.key_count -= 1
+			if (sound) music(24)
+		end
+	end
+end
+
 function player_move_room()
 	if pl.x < 0.5 or pl.x > 15.5 then
 	 if pl.room == nil then
@@ -804,7 +917,12 @@ function player_move_room()
 				pl.y += scroll_y
 				wy -= scroll_y
 				pl.x = x
-			else
+				if pl.room[1] == 0 and pl.room[2]==16 then
+					if enter_durer() then
+						-- todo move to complete mode
+					end
+				end
+ 		else
 				assert(false, "expected a room at "..flr(y))
 			end
 		else  -- in a room, return to main shaft
@@ -1311,7 +1429,7 @@ __map__
 003f3f3f3feee9eeeae13f3f3f3f0000010000000000000000000000000000010f00000000000000000000000000000f0d00000000000000000000000000000d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 003f3f3f3f3f3f3f3f3f3f3f3f3f0000010000000000000000000000000000010f00000000000000000000000000000f0d00000000000000000000000000000d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000010000000000000000000000000000010f00000000000000000000000000000f0d0d0d0d0d0d0d00000d0d0d0d0d0d0d000000000000000000000000000000000000000000000000000000000000000000000000000000000000003f0000000000000000000000000000000000000000
-00000000000000000000000000000000010000002d00000000000000000000010f00000000000000000000000000000f0d00000000000000000000000000770d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000010000002d001ed1d2000000000000010f00000000000000000000000000000f0d00000000000000000000000000770d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000010000010101010101000000000000010f00000000000000000000000000000f0d0d0d0d0d000d0d0d0d000d0d0d0d0d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000010000000000000000000000000000010f00000000000000000000000000000f0d79000000000000000000000000000d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000010000000000000000000000000000010f00000000000000000000000000000f0d0d0d0d0d0d0d00000d0d0d0d0d0d0d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
