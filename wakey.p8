@@ -112,13 +112,14 @@ function _init()
  pl.energy = max_energy
  pl.lives = 3
  
- pl.room = nil
+ pl.room = nil -- nil = main shaft
 	pl.keys = {false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false}
 	pl.key_count = 0
 	if debug then
-		pl.keys = {true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,}
-		pl.key_count = #pl.keys
+		pl.keys = {true,true,true,true,true,true,true,true,true,true,true,true,true,false,false,true,}
+		pl.key_count = #pl.keys -2  -- 15 and 14 are already in the room
 	end
+	-- collected and placed in durer room
 	durer_keys = {false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false}
  
 	if debug then
@@ -507,10 +508,10 @@ function _draw_intro()
 
  map(0,0,0,0,16,16)
 
- print("cursor keys to move", 22, 80, 9)
- print("❎ for wake", 38, 88, 9)
+ print("cursor keys to move", 23, 80, 9)
+ print("❎ for wake", 39, 88, 9)
 
- print("press ❎ to start", 27, 112, 12)
+ print("press ❎ to start", 28, 112, 12)
 
  scroll_tile(9)
 	if time() - last > 0.1 then 
@@ -566,7 +567,9 @@ function draw_room()
 		 print("durer", 56,11, 15)
 		 print(".", 59,5, 15)
 		 print(".", 61,5, 15)
-		 print("bring keys", 48,25, 2)
+		 if not is_complete() then
+			 print("bring keys", 48,25, 2)
+			end
 		 --scroll_tile(55)
 		else
 		 map(pl.room[1],pl.room[2],0,0,16,16)
@@ -1083,16 +1086,17 @@ function make_world(h)
 			local y = flr(rnd(h-1))+1
 		 if y > water_level+1 or y < water_level-4 then
 		  -- todo could relax room range here?
-		  if w[y] == nil and y > room_range_start and y < room_range_end then
+		  if w[y] == nil and w[y+1] == nil and y > room_range_start and y < room_range_end then
 					--printh(" - suitable gap")
 					-- todo check above/below free too?
 		   w[y] = {}
 					local room = rooms[#rooms]
 					rooms[#rooms]=nil
+					w[y+1] = {}
 			 	for i=0,rnd(3)+1 do
-					 w[y][flr(i)] = w_default_brick
+					 w[y+1][flr(i)] = w_default_brick
 					end
-					link_room(room, y, l)
+					link_room(room, y+1, l)
 				end
 			end
 		end
@@ -1186,6 +1190,21 @@ function scroll_tile(_tile)
  poke4(spritestart+(startrow*sheetwidth*8)+startcol*spritewide,temp) 
 end 
 
+-------------------------------
+-- string width with glyphs
+function strwidth(str)
+ local px=0
+ for i=1,#str do
+  px+=(ord(str,i)<128 and 4 or 8)
+ end
+ --remove px after last char
+ return px-1
+end
+-------------------------------
+-- get centered on screen width
+function center_x(str)
+ return 64 - strwidth(str)/2
+end
 
 
 __gfx__
