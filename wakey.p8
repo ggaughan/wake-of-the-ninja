@@ -426,23 +426,6 @@ function update_map()
 	 local rx=pl.room[1]
 	 local ry=pl.room[2]
 
-				-- todo remove: handled by new routines	 
---	 if rx == 0 and ry==0 then
---	  -- final room (was used for shaft scrolling)
---	  -- clear now
---	  assert(draining_sequence!=nil)
---	  for wall=0,15 do
---	  	if wall==15 then
---	  	 mset(0,wall,0)
---	  	else
---	  	 mset(0,wall,59)
---	  	end
---	  	for x=1,15 do
---					mset(x,wall,0)
---				end
---			end
---		end
-	 
 	 -- if end-game, drain the room
 	 if draining_sequence != nil then
 			for iw=0,14 do
@@ -673,6 +656,7 @@ function draw_room()
  		 -- drained already
 		  if water_level < w_h then
 				 print("draining...", 48,25, 2)		
+					scroll_tile(36)
 				else
 				 print("drain = exit", 42,25, 2)		
 				end
@@ -771,15 +755,15 @@ function draw_credits()
 	print("written by", 18,44,13)
 	print("greg gaughan", 63,44,1)
 
-	print("art/sfx", 18,54,13)
-	print("that tom hall", 59,54,1)
-	print("lafolie", 83,62,1)
+	print("art/sfx", 18,58,13)
+	print("that tom hall", 59,58,1)
+	print("lafolie", 83,66,1)
 
-	print("animation", 18,72,13)
-	print("toby hefflin", 63,72,1)
+	print("animation", 18,76,13)
+	print("toby hefflin", 63,76,1)
 	
-	print("music by", 18,82,13)
-	print("gruber", 87,82,1)
+	print("music by", 18,86,13)
+	print("gruber", 87,86,1)
 
 	print("press 🅾️ to close", 32,100,6)
 end
@@ -792,10 +776,13 @@ function _draw_success()
 	end
  spr(152,0,15*8)
  rectfill(9,0, 128, 50, 12)  --sky
+ sspr((72%16)*8,(72\16)*8, 8,8, 108,26, 8*2,8*2) -- sun
  rectfill(9,51, 128, 128, 11)  --grass
+ sspr((32%16)*8,(32\16)*8, 8,8, 20,68, 8*3,8*3) -- tree
+ sspr((32%16)*8,(32\16)*8, 8,8, 94,46, 8*1,8*1) -- tree
 
- print("you escaped the tower", 26, 16, 10)
- print("well done!", 46, 26, 10)
+ print("you escaped the tower", 30, 12, 10)
+ print("well done!", 52, 26, 10)
 
  print("press 🅾️ for credits", 28, 100, 12)
  print("press ❎ for restart", 28, 112, 12)
@@ -1315,6 +1302,7 @@ function make_world(h)
 	 w[0][i] = w_default_brick  -- ceiling
 	 w[h][i] = w_default_brick  -- floor
 	end
+	w[h-1][15] = 141  -- closed drain
 	
 	-- note last_ledge==0 -> need_room
 	-- i.e. pops last room and makes it in fixed location
