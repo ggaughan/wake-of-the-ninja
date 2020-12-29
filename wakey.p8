@@ -624,16 +624,18 @@ function draw_room()
 				
 				printh(ss.." "..key_seq_each.." = "..ss / key_seq_each)
 				if seq != nil then
-					if ss / key_seq_each < 0.4 then
-					 if #seq == 4 then
+				 if #seq == 4 then
+	 				if ss / key_seq_each < 0.4 then
 							print("=34", 53,105, 10)
 							scroll_tile(36)
 						end
-					else
-					 if #seq == 2 then
-							print("17=", 73,105, 10)
-							scroll_tile(36)
-						end
+				 elseif #seq == 2 then
+		 				if ss / key_seq_each < 0.9 then
+								print("17=", 73,105, 10)
+							end
+							if ss / key_seq_each < 0.6 then
+								scroll_tile(36)
+							end
 					end
 				end
 				
