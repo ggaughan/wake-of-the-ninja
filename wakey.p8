@@ -62,7 +62,10 @@ key_seq = {
 	{7,12,14,1},
 	{10,11,6,7},
 	
-	
+	{16,1},
+	{5,12},
+	{9,8},
+	{4,13},
 }
 key_seq_dur = 1.5  -- seconds each
 durer_sequence_length = (#key_seq+1) * key_seq_dur * 30
@@ -163,7 +166,7 @@ end
 -- update tab
 function control_player(pl)
 
-	if (durer_sequence!=nil and durer_sequence!=9999) return  -- wait
+	if (durer_sequence!=nil and durer_sequence!=-1) return  -- wait
 
 	-- note: +1 for smooth top row upward scrolling
 	local in_water = pl.y + wy + pl.dy - w_g_y +1 > water_level 
@@ -602,7 +605,7 @@ function draw_room()
 		 print(".", 61,5, 15)
 		 if durer_sequence == nil then
 			 print("bring keys", 48,25, 2)
-			elseif durer_sequence != 9999 then
+			elseif durer_sequence != -1 then
 				-- animate
 				local t = pl.t - durer_sequence
 
@@ -614,19 +617,28 @@ function draw_room()
 				
 				for n in all(seq) do
 				 kh=key_homes[n]
- 				rect(kh[1]*8,kh[2]*8, (kh[1]+2)*8,(kh[2]+1)*8-1, 10)
+				 if #seq ==4 or (#seq == 2 and ss / key_seq_each < 0.6) then
+	 				rect(kh[1]*8,kh[2]*8, (kh[1]+2)*8,(kh[2]+1)*8-1, 10)
+ 				end
 				end
 				
 				printh(ss.." "..key_seq_each.." = "..ss / key_seq_each)
-				if ss / key_seq_each < 0.4 then
-					print("=34", 53,105, 10)
-					scroll_tile(36)
-				else
-					printh(" no")
+				if seq != nil then
+					if ss / key_seq_each < 0.4 then
+					 if #seq == 4 then
+							print("=34", 53,105, 10)
+							scroll_tile(36)
+						end
+					else
+					 if #seq == 2 then
+							print("17=", 73,105, 10)
+							scroll_tile(36)
+						end
+					end
 				end
 				
 				if t > durer_sequence_length then
-					durer_sequence = 9999
+					durer_sequence = -1
 					-- todo next mode? draining
 				end
 			end
