@@ -41,8 +41,19 @@ enemy = {} --all active enemies (links to actor)
 enemy_limit = 3
 
 key_homes = {{12,10},{9,4},{6,4},{3,10},{3,6},{6,8},{9,8},{12,6},{3,8},{6,6},{9,6},{12,8},{12,4},{9,10},{6,10},{3,4}}
-durer_sequence = nil
+drain_rate = 1/15
 key_seq = {
+	{10,7},
+	{11,6},
+
+	{3,14},
+	{2,15},
+	
+	{16,1},
+	{5,12},
+	{9,8},
+	{4,13},
+
 	{16,3,2,13},
 	{5,10,11,8},
 	{9,6,7,12},
@@ -60,18 +71,11 @@ key_seq = {
 	{2,13,11,8},
 	{9,6,4,15},
 	{7,12,14,1},
-	{10,11,6,7},
 	
-	{16,1},
-	{5,12},
-	{9,8},
-	{4,13},
+	{10,11,6,7},
 }
 key_seq_dur = 1.5  -- seconds each
-durer_sequence_length = (#key_seq+1) * key_seq_dur * 30
-key_seq_each = durer_sequence_length/#key_seq
 
-w = {}
 w_h = 1000
 level_size = w_h / 10
 level_points = 50
@@ -82,25 +86,14 @@ w_default_row_water = {w_default_brick,10,10,10,10,10,10,10,10,10,10,10,10,10,10
 w_start_brick = 141
 
 pl_start_y = 7
-highest=0
-lowest=0
-points=0
 enemy_kill=2
 key_points=200
 wake_max=16
-wake = {}
-for i=1,wake_max do
-	wake[i]={-1,-1,-1}
-end
-wake_last=0
 wake_colour={12,2,1,6,13}
 -- todo remove wake_last_y = 0
-wake_start=0
-wake[wake_start]={-1,-1,-1}
 wake_decay = 16
 scroll_dy = 0.2  --note: 0.3 needs better collision resolution
 --scroll_dy = 0.1
-wdy = 0
 
 last_ledge = 0
 
@@ -117,13 +110,25 @@ w_g_y = 0.1  -- gravity
 --w_g_y = 0
 max_ledge_gap = max_energy_factor
 
+if debug then
+	w_h = 100
+	key_seq_dur = 0.1
+	drain_rate = 1/2
+end
+
+durer_sequence_length = (#key_seq+1) * key_seq_dur * 30
+key_seq_each = durer_sequence_length/#key_seq
+
 
 function _init()
  last = time()
 	_update = _update_intro
 	_draw = _draw_intro
 
+	w = {}
+
  wy=(w_h/2)
+	wdy = 0
  highest=wy
  lowest=wy
  water_level = wy + pl_start_y+3 
@@ -134,6 +139,15 @@ function _init()
 	room_range_end = (w_h - w_h/room_margin)
  wx=0
 	make_world(w_h)
+
+	points=0
+	wake = {}
+	for i=1,wake_max do
+		wake[i]={-1,-1,-1}
+	end
+	wake_last=0
+	wake_start=0
+	wake[wake_start]={-1,-1,-1}
 
 	pl=make_actor(4,pl_start_y)
 	pl.dir=r
@@ -153,6 +167,9 @@ function _init()
 	end
 	-- collected and placed in durer room
 	durer_keys = {false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false}
+
+ durer_sequence = nil
+ draining_sequence = nil
  
 	if debug then
 	 printh("mem "..stat(0))  -- in k
@@ -380,7 +397,13 @@ function update_map()
 			for x=0,15 do
 				if w[y_w] then
 					if w[y_w][wx+x] then
-						mset(x,y,w[y_w][wx+x])
+					 if draining_sequence !=nil and x==0 and	w[y_w][wx+x] == w_water_brick and y_w < water_level then
+							mset(x,y,0)
+					 elseif draining_sequence !=nil and x==15 and	w[y_w][wx+x] == w_water_brick and y_w < water_level then
+							mset(x,y,0)
+					 else
+							mset(x,y,w[y_w][wx+x])
+						end
 					else
 						mset(x,y,dr[x+1])
 					end
@@ -392,7 +415,39 @@ function update_map()
 	else
 	 local rx=pl.room[1]
 	 local ry=pl.room[2]
-	 -- todo skip if already done?
+
+				-- todo remove: handled by new routines	 
+--	 if rx == 0 and ry==0 then
+--	  -- final room (was used for shaft scrolling)
+--	  -- clear now
+--	  assert(draining_sequence!=nil)
+--	  for wall=0,15 do
+--	  	if wall==15 then
+--	  	 mset(0,wall,0)
+--	  	else
+--	  	 mset(0,wall,59)
+--	  	end
+--	  	for x=1,15 do
+--					mset(x,wall,0)
+--				end
+--			end
+--		end
+	 
+	 -- if end-game, drain the room
+	 if draining_sequence != nil then
+			for iw=0,14 do
+				if wy+16-iw < water_level then
+				 --printh("d:"..wy+ry-iw.." "..water_level)
+					for ix=0,15 do  -- note: includes doorway (l or r)
+					 if mget(rx+ix,ry+15-iw) == w_water_brick then
+							mset(rx+ix,ry+15-iw,0)
+						end
+					end
+				end
+			end
+	 end
+	 -- todo skip if already done? 
+	 -- move to player_move_room?
 	 -- hide keys already collected
 	 for xx=0,15 do
 	 	for yy=0,15 do
@@ -428,6 +483,17 @@ function _update_intro()
 	end
 end
 
+function _update_success()
+ --update_map() -- todo remove if not needed
+	if btnp(❎) then
+		show_credits = not show_credits
+	end
+	if btnp(🅾️) then
+		_init()
+	end
+end
+
+
 function _update_game()
  control_player(pl)
  update_enemies()
@@ -444,11 +510,15 @@ function _update_game()
  foreach(actor, move_actor)
  
  player_move_room()
- if durer_sequence == nil and is_complete() then
-  durer_sequence = pl.t  -- freeze player control while we animate
- 	-- assert now in durer room
-	 -- todo: go to complete mode
-	end
+ 
+ if draining_sequence != nil then
+  if water_level < w_h then
+	 	water_level += drain_rate
+	 else
+	 	-- wait for player to leave via drain
+	 	-- todo: new mode + turn off enemies?
+	 end
+ end
 end
 
 
@@ -606,11 +676,11 @@ function draw_room()
 		 if durer_sequence == nil then
 			 print("bring keys", 48,25, 2)
 			elseif durer_sequence != -1 then
-				-- animate
+				-- end game animation
 				local t = pl.t - durer_sequence
 
 				local si = t\key_seq_each +1
-				printh(si.." "..t..":"..durer_sequence_length)
+				--printh(si.." "..t..":"..durer_sequence_length)
 				local seq = key_seq[si]
 
 				local ss = si*key_seq_each - t  -- countdown
@@ -622,16 +692,16 @@ function draw_room()
  				end
 				end
 				
-				printh(ss.." "..key_seq_each.." = "..ss / key_seq_each)
+				--printh(ss.." "..key_seq_each.." = "..ss / key_seq_each)
 				if seq != nil then
 				 if #seq == 4 then
 	 				if ss / key_seq_each < 0.4 then
-							print("=34", 53,105, 10)
+							print("=34", 73,105, 10)
 							scroll_tile(36)
 						end
 				 elseif #seq == 2 then
 		 				if ss / key_seq_each < 0.9 then
-								print("17=", 73,105, 10)
+								print("17=", 53,105, 10)
 							end
 							if ss / key_seq_each < 0.6 then
 								scroll_tile(36)
@@ -641,15 +711,59 @@ function draw_room()
 				
 				if t > durer_sequence_length then
 					durer_sequence = -1
-					-- todo next mode? draining
+					-- move to next mode
+					draining_sequence = pl.t
+				 print("draining...", 48,25, 9)
+				 -- todo give message about finding drain?
+					-- open drain in floor
+					w[w_h-1][15] = 0
+					w[w_h][15] = 126 --indicator
+					local room = {0,0}  -- re-use shaft buffer
+					link_room(room, w_h, r)				
 				end
 			end
+	 -- todo remove: handled by routines
+--	 elseif rx == 0 and ry==0 then
+--	  -- final room (was used for shaft scrolling)
+--	  -- dynamically draw now
+--		 map(rx,ry,0,0,16,16)
+--		 rectfill(9,0, 128, 50, 12)  --sky
+--		 rectfill(9,51, 128, 128, 11)  --grass
 		else
-		 map(pl.room[1],pl.room[2],0,0,16,16)
+		 map(rx,ry,0,0,16,16)
 	 end
 	end
  pal()
 end
+
+function _draw_success()
+	cls()
+	
+ for wall=0,14 do
+  spr(0,wall*8,59)
+	end
+ rectfill(9,0, 128, 50, 12)  --sky
+ rectfill(9,51, 128, 128, 11)  --grass
+
+ print("you escaped the tower", 26, 16, 10)
+ print("well done!", 46, 26, 10)
+
+ print("press ❎ for credits", 28, 100, 12)
+ print("press 🅾️ for restart", 28, 112, 12)
+
+ print("score:"..points,26,0,7)  -- in k
+ 
+ -- todo store high score
+ -- todo store in cart memory
+ 
+ if show_credits then
+	 draw_rwin(10,10,80,80,7,1)		
+		print("credits", 20,20,7)
+		-- todo scroll?
+		-- todo press 🅾️ for restart
+ end
+end
+
 
 function _draw_game()
  cls()
@@ -981,6 +1095,7 @@ function enter_durer()
 			if (sound) music(24)
 		end
 	end
+	return true
 end
 
 function player_move_room()
@@ -1005,10 +1120,23 @@ function player_move_room()
 				pl.y += scroll_y
 				wy -= scroll_y
 				pl.x = x
-				if pl.room[1] == 0 and pl.room[2]==16 then
+				if pl.room[1]==0 and pl.room[2]==16 then
 					if enter_durer() then
-						-- todo move to complete mode
+					 if durer_sequence == nil and is_complete() then
+					 	-- move to end game animation mode
+					  durer_sequence = pl.t  -- freeze player control while we animate
+						end
 					end
+				end
+				if pl.room[1]==0 and pl.room[2]==0 then
+					-- game over
+					-- todo remove: print("well done - you've escaped!", 20, 30, 10)
+					printh("done!")
+					--if (sound) music(-1)
+					--if (sound) sfx(5)  
+					show_credits = false
+					_update = _update_success
+					_draw = _draw_success
 				end
  		else
 				assert(false, "expected a room at "..flr(y))
@@ -1052,14 +1180,14 @@ function link_room(room, y, d)
  if w[y-1] == nil then
   w[y-1] = {}
  end
-	w[y-1][door_pos] = (y > water_level+1) and 10 or 0
+	w[y-1][door_pos] = (y > water_level+1) and w_water_brick or 0
 	w[y-1][door_pos+d_offset] = room
 	-- modify room to suit: means we can't re-use (unless we dynamically add/remove when entering)
-	mset(room[1]+15-door_pos,room[2]+14,(y > water_level+1) and 10 or 0)  
+	mset(room[1]+15-door_pos,room[2]+14,(y > water_level+1) and w_water_brick or 0)  
 	-- add water if necessary
 	for iw=0,14 do
 		if y-iw > water_level then
-			for ix=1,15 do
+			for ix=1,14 do  --1,14? was 15
 			 if mget(room[1]+ix,room[2]+15-iw) == 0 then
 					mset(room[1]+ix,room[2]+15-iw,w_water_brick)
 				end
@@ -1138,6 +1266,7 @@ function make_world(h)
 	}
 
 	w[0] = {}
+	w[h-1] = {}  -- prepare for end drain
 	w[h] = {}
 	for i=0,15 do
 	 w[0][i] = w_default_brick  -- ceiling
@@ -1281,6 +1410,35 @@ function center_x(str)
  return 64 - strwidth(str)/2
 end
 
+function draw_rwin(_x,_y,_w,_h,_c1,_c2)
+ -- would check screen bounds but may want to scroll window on?
+ if (_w<12 or _h<12) return(false) -- min size
+ -- okay draw inside
+ rectfill(_x+3,_y+1,_x+_w-3,_y+_h-1,_c1) -- x big middle bit
+ line(_x+2,_y+3,_x+2,_y+_h-3,_c1) -- x left edge taller
+ line(_x+1,_y+5,_x+1,_y+_h-5,_c1) -- x left edge shorter
+ line(_x+_w-2,_y+3,_x+_w-2,_y+_h-3,_c1) -- x right edge taller
+ line(_x+_w-1,_y+5,_x+_w-1,_y+_h-5,_c1) -- x right edge shorter
+ --now the border left side
+ line(_x,_y+5,_x,_y+_h-5,_c2) -- x longest leftmost edge
+ line(_x+1,_y+3,_x+1,_y+4,_c2) -- x 2 left top
+ line(_x+1,_y+_h-4,_x+1,_y+_h-3,_c2) -- x 2 left btm
+ pset(_x+2,_y+2,_c2)  -- x 1 top dot
+ pset(_x+2,_y+_h-2,_c2)  -- x 1 btm dot
+ line(_x+3,_y+1,_x+4,_y+1,_c2)  -- x 2 top curve
+ line(_x+3,_y+_h-1,_x+4,_y+_h-1,_c2)  -- x 2 btm curve
+ --now the border right side
+ line(_x+_w,_y+5,_x+_w,_y+_h-5,_c2) -- x longest leftmost edge
+ line(_x+_w-1,_y+3,_x+_w-1,_y+4,_c2) -- x 2 left top
+ line(_x+_w-1,_y+_h-4,_x+_w-1,_y+_h-3,_c2) -- x 2 left btm
+ pset(_x+_w-2,_y+2,_c2)  -- x 1 top dot
+ pset(_x+_w-2,_y+_h-2,_c2)  -- x 1 btm dot
+ line(_x+_w-3,_y+1,_x+_w-4,_y+1,_c2)  -- x 2 top curve
+ line(_x+_w-3,_y+_h-1,_x+_w-4,_y+_h-1,_c2)  -- x 2 btm curve
+ -- top and bottom!
+ line(_x+5,_y,_x+_w-5,_y,_c2) -- x top
+ line(_x+5,_y+_h,_x+_w-5,_y+_h,_c2) -- x bottom
+end
 
 __gfx__
 00012000606660666066606660666066606660666066606616666661feeeeee87bbbbbb30000004000000030000300000b0dd030777777674f9f4fff7999a999
