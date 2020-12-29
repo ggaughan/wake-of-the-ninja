@@ -39,7 +39,8 @@ anim={
 enemy_limit = 3
 
 key_homes = {{12,10},{9,4},{6,4},{3,10},{3,6},{6,8},{9,8},{12,6},{3,8},{6,6},{9,6},{12,8},{12,4},{9,10},{6,10},{3,4}}
-drain_rate = 1/15
+drain_rate = 1/8
+drain_noise_freq = 8
 key_seq = {
 	{10,7},
 	{11,6},
@@ -110,7 +111,7 @@ if debug then
 	w_h = 100
 	max_ledge_gap = 10
 	key_seq_dur = 0.1
-	drain_rate = 1/2
+	--drain_rate = 1/2
 end
 
 durer_sequence_length = (#key_seq+1) * key_seq_dur * 30
@@ -475,16 +476,19 @@ function _update_intro()
 		_draw = _draw_game
 	end
 	if btnp(🅾️) then
+	 if (sound) sfx(19)
 		show_credits = not show_credits
 	end
 end
 
 function _update_success()
 	if btnp(🅾️) then
+	 if (sound) sfx(19)
 		show_credits = not show_credits
 	end
 	if btnp(❎) then
 		reload(0x2000, 0x2000, 0x1000)  -- reset doors, key-takes etc.
+		if (sound) music(-1)
 		_init(true)  -- auto start
 	end
 end
@@ -510,9 +514,11 @@ function _update_game()
  if draining_sequence != nil then
   if water_level < w_h then
 	 	water_level += drain_rate
+			if (sound and flr(water_level%drain_noise_freq)==0) sfx(63)
 	 else
 	 	-- wait for player to leave via drain
 	 	-- todo: new mode + turn off enemies?
+			if (sound) sfx(63, -2)
 	 end
  end
 end
@@ -665,13 +671,14 @@ function draw_room()
 				local t = pl.t - durer_sequence
 
 				local si = t\key_seq_each +1
-				--printh(si.." "..t..":"..durer_sequence_length)
+				printh(si.." "..t..":"..durer_sequence_length.." "..t%key_seq_each)
 				local seq = key_seq[si]
 
 				local ss = si*key_seq_each - t  -- countdown
 				
 				for n in all(seq) do
 				 kh=key_homes[n]
+ 				if (sound and flr(t%key_seq_each)==0) sfx(14)
 				 if #seq ==4 or (#seq == 2 and ss / key_seq_each < 0.6) then
 	 				rect(kh[1]*8,kh[2]*8, (kh[1]+2)*8,(kh[2]+1)*8-1, 10)
  				end
@@ -698,6 +705,7 @@ function draw_room()
 					durer_sequence = -1
 					-- move to next mode
 					draining_sequence = pl.t
+					if (sound) sfx(63)
 				 print("draining...", 48,25, 9)
 				 -- todo give message about finding drain?
 					-- open drain in floor
@@ -1126,7 +1134,8 @@ function enter_durer()
 			pl.keys[key] = false
 			pl.key_count -= 1
 			-- todo perhaps animate key from player to slot
-			if (sound) music(24)
+			--if (sound) music(24)
+			if (sound) sfx(12)
 		end
 	end
 	return true
@@ -1134,6 +1143,7 @@ end
 
 function player_move_room()
 	if pl.x < 0.5 or pl.x > 15.5 then
+		if (sound) music(-1)
 	 if pl.room == nil then
 			local in_water = pl.y + wy + pl.dy - w_g_y +1 > water_level 
 		 -- note: +1 for extra row for upward scroll
@@ -1159,12 +1169,14 @@ function player_move_room()
 					 if durer_sequence == nil and is_complete() then
 					 	-- move to end game animation mode
 					  durer_sequence = pl.t  -- freeze player control while we animate
+					 else
+							if (sound) music(21)
 						end
 					end
 				end
 				if pl.room[1]==0 and pl.room[2]==0 then
 					-- game over
-					--if (sound) music(-1)
+					if (sound) music(0)
 					--if (sound) sfx(5)  
 					_update = _update_success
 					_draw = _draw_success
