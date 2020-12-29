@@ -5,6 +5,8 @@ __lua__
 -----------
 debug = true
 
+version = 0.9
+
 sound = true
 s_die = 6
 
@@ -39,11 +41,37 @@ enemy = {} --all active enemies (links to actor)
 enemy_limit = 3
 
 key_homes = {{12,10},{9,4},{6,4},{3,10},{3,6},{6,8},{9,8},{12,6},{3,8},{6,6},{9,6},{12,8},{12,4},{9,10},{6,10},{3,4}}
+durer_sequence = nil
+key_seq = {
+	{16,3,2,13},
+	{5,10,11,8},
+	{9,6,7,12},
+	{4,15,14,1},
+	
+	{16,5,9,4},
+	{3,10,6,15},
+	{2,11,7,14},
+	{13,8,12,1},
+	
+	{16,10,7,1},
+	{4,6,11,13},
+	
+	{16,3,5,10},
+	{2,13,11,8},
+	{9,6,4,15},
+	{7,12,14,1},
+	{10,11,6,7},
+	
+	
+}
+key_seq_dur = 1.5  -- seconds each
+durer_sequence_length = (#key_seq+1) * key_seq_dur * 30
+key_seq_each = durer_sequence_length/#key_seq
 
 w = {}
 w_h = 1000
 level_size = w_h / 10
-level_points = 100
+level_points = 50
 w_default_brick = 59
 w_default_row = {w_default_brick,0,0,0,0,0,0,0,0,0,0,0,0,0,0,w_default_brick}
 w_water_brick=10
@@ -55,6 +83,7 @@ highest=0
 lowest=0
 points=0
 enemy_kill=2
+key_points=200
 wake_max=16
 wake = {}
 for i=1,wake_max do
@@ -133,6 +162,8 @@ end
 -->8
 -- update tab
 function control_player(pl)
+
+	if (durer_sequence!=nil and durer_sequence!=9999) return  -- wait
 
 	-- note: +1 for smooth top row upward scrolling
 	local in_water = pl.y + wy + pl.dy - w_g_y +1 > water_level 
@@ -410,10 +441,10 @@ function _update_game()
  foreach(actor, move_actor)
  
  player_move_room()
- if is_complete() then
+ if durer_sequence == nil and is_complete() then
+  durer_sequence = pl.t  -- freeze player control while we animate
  	-- assert now in durer room
 	 -- todo: go to complete mode
- 	--rect((6+3)*8,(10)*8, (6+3+2)*8,(11)*8-1, 10)
 	end
 end
 
@@ -569,10 +600,36 @@ function draw_room()
 		 print("durer", 56,11, 15)
 		 print(".", 59,5, 15)
 		 print(".", 61,5, 15)
-		 if not is_complete() then
+		 if durer_sequence == nil then
 			 print("bring keys", 48,25, 2)
+			elseif durer_sequence != 9999 then
+				-- animate
+				local t = pl.t - durer_sequence
+
+				local si = t\key_seq_each +1
+				printh(si.." "..t..":"..durer_sequence_length)
+				local seq = key_seq[si]
+
+				local ss = si*key_seq_each - t  -- countdown
+				
+				for n in all(seq) do
+				 kh=key_homes[n]
+ 				rect(kh[1]*8,kh[2]*8, (kh[1]+2)*8,(kh[2]+1)*8-1, 10)
+				end
+				
+				printh(ss.." "..key_seq_each.." = "..ss / key_seq_each)
+				if ss / key_seq_each < 0.4 then
+					print("=34", 53,105, 10)
+					scroll_tile(36)
+				else
+					printh(" no")
+				end
+				
+				if t > durer_sequence_length then
+					durer_sequence = 9999
+					-- todo next mode? draining
+				end
 			end
-		 --scroll_tile(55)
 		else
 		 map(pl.room[1],pl.room[2],0,0,16,16)
 	 end
@@ -591,7 +648,7 @@ function _draw_game()
  -- top row
  rectfill(8,0, 118,5, 0)
 
-	spr(30, 9,0)
+	spr(30, 9,0, 1,1,false,true)
 	print(pl.key_count, 16,0,7)
 
  print("score:"..points,26,0,7)  -- in k
@@ -903,8 +960,10 @@ function enter_durer()
 		if got then
 		 -- move to this room
 			durer_keys[key] = true
+			points+=key_points
 			pl.keys[key] = false
 			pl.key_count -= 1
+			-- todo perhaps animate key from player to slot
 			if (sound) music(24)
 		end
 	end
@@ -1502,7 +1561,7 @@ a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a90e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e3b3b3b3b3b3b3b3b
 0100ac8d8d8d8d8d9c8d8d8d8d8dae010e00000000000000000000000000000e3b00000000000000000000000000003b3f00000000000000000000000000003f3c00000000000000000000000000003c0d00000000000000000000000000000d0f00000000000000000000000000000f3d00000000000000000000000000003d
 0100000000000000af000000000000010e00000000000000000000000000000e3b00000000001ec0d20000000000003b3f00000000000000000000000000003f3c00000000000000000000000000003c0d00000000000000000000000000000d0f00000000000000000000000000000f3d00000000000000000000000000003d
 01000000000000009c000000000000010e00000000000000000000000000000e3b000000003b3b3b3b3b00000000003b3f00000000000000000000000000003f3c00000000000000000000000000003c0d00000000000000000000000000000d0f00000000000000000000000000000f3d00000000000000000000000000003d
-01000000000000379c370000000000010e00000000000000000000000000000e3b000000003b0000003b00000000003b3f00000000000000000000000000003f3c00000000000000000000000000003c0d00000000000000000000000000000d0f00000000000000000000000000000f3d00000000000000000000000000003d
+01000000000000249c240000000000010e00000000000000000000000000000e3b000000003b0000003b00000000003b3f00000000000000000000000000003f3c00000000000000000000000000003c0d00000000000000000000000000000d0f00000000000000000000000000000f3d00000000000000000000000000003d
 010101010101010101010101010101010e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d
 __sfx__
 000100002e1502e1502f1502f1502f150351503715000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100
