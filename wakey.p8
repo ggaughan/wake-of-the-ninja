@@ -36,8 +36,6 @@ anim={
 	["enemy"]={97},
 }
 
-actor = {} --all actors in world
-enemy = {} --all active enemies (links to actor)
 enemy_limit = 3
 
 key_homes = {{12,10},{9,4},{6,4},{3,10},{3,6},{6,8},{9,8},{12,6},{3,8},{6,6},{9,6},{12,8},{12,4},{9,10},{6,10},{3,4}}
@@ -95,8 +93,6 @@ wake_decay = 16
 scroll_dy = 0.2  --note: 0.3 needs better collision resolution
 --scroll_dy = 0.1
 
-last_ledge = 0
-
 default_energy = 1
 default_energy_use = default_energy/3
 recharge_factor = 1/0.6 -- key to feel = difficulty level
@@ -112,6 +108,7 @@ max_ledge_gap = max_energy_factor
 
 if debug then
 	w_h = 100
+	max_ledge_gap = 10
 	key_seq_dur = 0.1
 	drain_rate = 1/2
 end
@@ -120,17 +117,23 @@ durer_sequence_length = (#key_seq+1) * key_seq_dur * 30
 key_seq_each = durer_sequence_length/#key_seq
 
 
-function _init()
+function _init(auto)
  last = time()
-	_update = _update_intro
-	_draw = _draw_intro
+ if auto then  -- player restart
+		if (sound) sfx(5)  
+		_update = _update_game
+		_draw = _draw_game
+ else
+		_update = _update_intro
+		_draw = _draw_intro
+	end
 
-	w = {}
+	w = {}	-- shaft world def (sparse)
+	actor = {} --all actors in world
+	enemy = {} --all active enemies (links to actor)
 
  wy=(w_h/2)
 	wdy = 0
- highest=wy
- lowest=wy
  water_level = wy + pl_start_y+3 
  room_margin = 8  -- e.g. 4 -> leave top and bottom 1/4 free of rooms
  room_chance = 0.92  -- todo adjust if room_margin or w_h changes
@@ -138,9 +141,14 @@ function _init()
  room_range_start = w_h/room_margin
 	room_range_end = (w_h - w_h/room_margin)
  wx=0
+	last_ledge = 0
+ assert(abs(last_ledge - (water_level+3)) > max_ledge_gap*2, "max_ledge_gap needs to be smaller to place key room")
+ 
 	make_world(w_h)
 
 	points=0
+ highest=wy
+ lowest=wy
 	wake = {}
 	for i=1,wake_max do
 		wake[i]={-1,-1,-1}
@@ -170,12 +178,14 @@ function _init()
 
  durer_sequence = nil
  draining_sequence = nil
+
+	show_credits = false
  
 	if debug then
 	 printh("mem "..stat(0))  -- in k
 	end
 	
-	if (sound) music(29)
+	if (sound and not auto) music(29)
 end
 
 
@@ -481,15 +491,18 @@ function _update_intro()
 		_update = _update_game
 		_draw = _draw_game
 	end
+	if btnp(🅾️) then
+		show_credits = not show_credits
+	end
 end
 
 function _update_success()
- --update_map() -- todo remove if not needed
-	if btnp(❎) then
+	if btnp(🅾️) then
 		show_credits = not show_credits
 	end
-	if btnp(🅾️) then
-		_init()
+	if btnp(❎) then
+		reload(0x2000, 0x2000, 0x1000)  -- reset doors, key-takes etc.
+		_init(true)  -- auto start
 	end
 end
 
@@ -607,25 +620,6 @@ function draw_wake()
 	end
 end
 
-function _draw_intro()
-	cls()
-
- print("can you reach the extremes?", 6, 6, 10)
-
- map(0,0,0,0,16,16)
-
- print("cursor keys to move", 23, 80, 9)
- print("❎ for wake", 39, 88, 9)
-
- print("press ❎ to start", 28, 112, 12)
-
- scroll_tile(9)
-	if time() - last > 0.1 then 
-	 pal(4, flr(1+rnd()*#wake_colour), 1)
-	 last = time()
-	end
-end
-
 function get_key_from_map(x,y)
 	local d1 = mget(x,y)
 	local d2 = mget(x+1,y)
@@ -675,6 +669,13 @@ function draw_room()
 		 print(".", 61,5, 15)
 		 if durer_sequence == nil then
 			 print("bring keys", 48,25, 2)
+			elseif durer_sequence == -1 then
+ 		 -- drained already
+		  if water_level < w_h then
+				 print("draining...", 48,25, 2)		
+				else
+				 print("drain = exit", 42,25, 2)		
+				end
 			elseif durer_sequence != -1 then
 				-- end game animation
 				local t = pl.t - durer_sequence
@@ -736,20 +737,68 @@ function draw_room()
  pal()
 end
 
+
+function _draw_intro()
+	cls()
+
+ print("can you reach the extremes?", 6, 6, 10)
+
+ map(0,0,0,0,16,16)
+
+ print("cursor keys to move", 23, 80, 9)
+ print("❎ for wake", 39, 88, 9)
+ print("press 🅾️ for credits", 22, 100, 13)
+
+ print("press ❎ to start", 28, 112, 12)
+
+ scroll_tile(9)
+	if time() - last > 0.1 then 
+	 pal(4, flr(1+rnd()*#wake_colour), 1)
+	 last = time()
+	end
+	
+ if show_credits then
+  draw_credits()
+ end
+end
+
+function draw_credits()
+ draw_rwin(12,30,104,80,7,0)		
+	print("credits", 48,34,5)
+	-- todo underline
+	
+	-- todo scroll?
+	print("written by", 18,44,13)
+	print("greg gaughan", 63,44,1)
+
+	print("art/sfx", 18,54,13)
+	print("that tom hall", 59,54,1)
+	print("lafolie", 83,62,1)
+
+	print("animation", 18,72,13)
+	print("toby hefflin", 63,72,1)
+	
+	print("music by", 18,82,13)
+	print("gruber", 87,82,1)
+
+	print("press 🅾️ to close", 32,100,6)
+end
+
 function _draw_success()
 	cls()
 	
  for wall=0,14 do
-  spr(0,wall*8,59)
+  spr(59,0,wall*8)
 	end
+ spr(152,0,15*8)
  rectfill(9,0, 128, 50, 12)  --sky
  rectfill(9,51, 128, 128, 11)  --grass
 
  print("you escaped the tower", 26, 16, 10)
  print("well done!", 46, 26, 10)
 
- print("press ❎ for credits", 28, 100, 12)
- print("press 🅾️ for restart", 28, 112, 12)
+ print("press 🅾️ for credits", 28, 100, 12)
+ print("press ❎ for restart", 28, 112, 12)
 
  print("score:"..points,26,0,7)  -- in k
  
@@ -757,10 +806,7 @@ function _draw_success()
  -- todo store in cart memory
  
  if show_credits then
-	 draw_rwin(10,10,80,80,7,1)		
-		print("credits", 20,20,7)
-		-- todo scroll?
-		-- todo press 🅾️ for restart
+  draw_credits()
  end
 end
 
@@ -1130,11 +1176,8 @@ function player_move_room()
 				end
 				if pl.room[1]==0 and pl.room[2]==0 then
 					-- game over
-					-- todo remove: print("well done - you've escaped!", 20, 30, 10)
-					printh("done!")
 					--if (sound) music(-1)
 					--if (sound) sfx(5)  
-					show_credits = false
 					_update = _update_success
 					_draw = _draw_success
 				end
