@@ -729,7 +729,7 @@ function _draw_intro()
 
  map(0,0,0,0,16,16)
 
- print("cursor keys to move", 23, 80, 9)
+ print("⬅️➡️⬆️⬇️ to move", 28, 80, 9)
  print("❎ for wake", 39, 88, 9)
  print("press 🅾️ for credits", 22, 100, 13)
 
