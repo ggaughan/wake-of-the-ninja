@@ -209,9 +209,7 @@ function _init(auto)
  highest=wy
  lowest=wy
 	wake = {}
-	for i=1,wake_max do
-		wake[i]={-1,-1,-1}
-	end
+ clear_wake()
 	wake_last=0
 	wake_start=0
 	wake[wake_start]={-1,-1,-1}
@@ -1077,18 +1075,19 @@ function solid_actor(a, dx, dy)
      v=a.dx + a2.dy
      a.dx = v/2
      a2.dx = v/2
-     if a==pl and pl.state!=die and is_enemy(a2) then
-      if (sound) sfx(s_die)
-      pl.state=die
-      pl.dy=0
-      pl.t=0
-      pl.energy=0
+     if a==pl and is_enemy(a2) then
+      if pl.state!=die then
+	      if (sound) sfx(s_die)
+	      pl.state=die
+	      pl.dy=0
+	      pl.t=0
+	      pl.energy=0
+	     -- else already dying
+	     end
       a2.y=-1  -- kill
       points+=enemy_kill
 					 if (sound) sfx(s_enemy_kill)
-						for i=1,wake_max do
-							wake[i]={-1,-1,-1}
-						end
+					 clear_wake()
 					 --printh("wend die x")
      	--printh("die")    	
 	    end
@@ -1100,18 +1099,19 @@ function solid_actor(a, dx, dy)
      v=a.dy + a2.dy
      a.dy=v/2
      a2.dy=v/2
-     if a==pl and pl.state!=die and is_enemy(a2) then
-      if (sound) sfx(s_die)
-      pl.state=die
-      pl.t=0
-      pl.dy=0
-      pl.energy=0
+     if a==pl and is_enemy(a2) then
+	     if pl.state!=die then
+	      if (sound) sfx(s_die)
+	      pl.state=die
+	      pl.t=0
+	      pl.dy=0
+	      pl.energy=0
+	     -- else already dying
+	     end
       a2.y=-1  -- kill
       points+=enemy_kill
 					 if (sound) sfx(s_enemy_kill)
-						for i=1,wake_max do
-							wake[i]={-1,-1,-1}
-						end
+					 clear_wake()
 					 --printh("wend die y")
      	--printh("die")    	
 	    end
@@ -1295,10 +1295,7 @@ function player_move_room()
 		  -- no points
     e.y=-1  -- kill
 		end
-		for i=1,wake_max do
-			wake[i]={-1,-1,-1}
-		end
-		
+	 clear_wake()	
 	end
 end
 
@@ -1592,6 +1589,11 @@ function strjoin(delimiter, list)
  return string
 end
 
+function clear_wake()
+	for i=1,wake_max do
+		wake[i]={-1,-1,-1}
+	end
+end
 __gfx__
 00012000606660666066606660666066606660666066606616666661feeeeee87bbbbbb30000004000000030000300000b0dd030777777674f9f4fff7999a999
 07d1257000000000000000000000000000000000007777006d6666d6e8888882b3333331040000000300000003000030d3000b0d76777777fffff9f49999979a
