@@ -227,7 +227,7 @@ function _init(auto)
 	pl.keys = {false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false}
 	pl.key_count = 0
 	if debug then
-		pl.keys = {true,true,true,true,true,true,true,true,true,true,true,true,true,false,false,true,}
+		--pl.keys = {true,true,true,true,true,true,true,true,true,true,true,true,true,false,false,true,}
 		pl.key_count = #pl.keys -2  -- 15 and 14 are already in the room
 		
 		if assert_durer then
@@ -412,23 +412,40 @@ function control_player(pl)
  -- sfx(1)
  --end
 
+	--printh(pl.y + wy + pl.dy - w_g_y .. " .. ".. water_level)	
+	if in_water and pl.y + wy > water_level then
+		printh("swimming")
+	 -- todo idle float anim?
+		if pl.state == l then
+			pl.state = l_swim
+		elseif pl.state == r then
+			pl.state = r_swim
+		end
+	end
+
 	-- todo revisit 
-	if in_water then
+	local solid_pl
+	printh("so far "..pl.state)
+	if in_water and pl.y + wy -1 > water_level then
+		printh("falling in water check")
 		--printh(pl.dy)
 		if pl.dy < -0.1 then
-			--solid_pl = solid_a(pl, 0, pl.dy+wdy-w_g_y) 
-			solid_pl = solid_a(pl, 0, pl.dy-w_g_y) 
+			printh(" falling up "..pl.dy)
 			if pl.state != t and pl.state != jump then
+				--solid_pl = solid_a(pl, 0, pl.dy+wdy-w_g_y) 
+				solid_pl = solid_a(pl, 0, pl.dy-w_g_y) 
 				if not solid_pl and pl.state != die then
 				 pl.state = falling
 				end
 			end
 		end
-	else
+	elseif pl.y + wy + 1 < water_level then
+		printh("falling in air check")
 		if pl.dy > 0.1 then
-			--solid_pl = solid_a(pl, 0, pl.dy+wdy+w_g_y) 
-			solid_pl = solid_a(pl, 0, pl.dy+w_g_y) 
+			printh(" falling down "..pl.dy)
 			if pl.state != b and pl.state != jump then
+				--solid_pl = solid_a(pl, 0, pl.dy+wdy+w_g_y) 
+				solid_pl = solid_a(pl, 0, pl.dy+w_g_y) 
 				if not solid_pl and pl.state != die then
 				 pl.state = falling
 				end
@@ -437,16 +454,7 @@ function control_player(pl)
 	end
 	-- todo fall up (float) if -ve gravity
 
-	--printh(pl.y + wy + pl.dy - w_g_y .. " .. ".. water_level)	
-	if in_water then
-	 -- todo idle float anim?
-		if pl.state == l then
-			pl.state = l_swim
-		elseif pl.state == r then
-			pl.state = r_swim
-		end
-	end
- 
+	-- points? 
 	if pl.y+wy < highest - level_size then
 	 points+=level_points
 	 if (sound) sfx(s_highlow)
@@ -531,8 +539,9 @@ function update_map()
 							local y_w = ceil(wy)
 	  				-- hide: already picked up
 	  				--local replace = y_w - yy > water_level and w_water_brick or 0
-	  				local replace = y_w + yy > water_level +1 and w_water_brick or 0
-	  				--printh(replace.." "..y_w.."+"..yy.." "..water_level+1)
+	  				--local replace = y_w + yy > water_level and w_water_brick or 0
+	  				local replace = wy + yy > water_level and w_water_brick or 0
+	  				printh(replace.." "..y_w.."+"..yy.." "..water_level+1)
 			 			mset(rx+xx,ry+yy, replace)
 			 			mset(rx+xx+1,ry+yy, replace)
 		  			mset(rx+xx+2,ry+yy, replace)
@@ -618,8 +627,13 @@ function draw_actor(a)
 	--	-- invert based on gravity 
 	-- fy=a.dir==b
 	--else
-	fy=a.dir==b 
-	--end
+ if a.y + wy > water_level+1 then  -- +1 to stay upright on surface
+  fy = (a.dir != t)
+ else
+		fy=a.dir==b 
+	end
+	if (fy) printh("flipy")
+	if (a==pl) printh("*"..a.state)
  if a.state then
 	 spr(anim[a.state][ceil(a.frame)],sx,sy,1,1, fx,fy)
 	else
@@ -918,16 +932,19 @@ function _draw_game()
 	 --local _test_y = solid_a(pl, 0, pl.dy) 
 	
 	 --print("x "..pl.x,0,120,7)
-	 --print("y "..pl.y,48,120,7)
-	 --print("wy "..wy,90,120,7)
+	 print("y "..pl.y,48,120,7)
+	 print("wy "..wy,90,120,7)
 
 		----print("c "..ceil(wy)-wy, 10,1,7)
 	 
 	 --print("t "..pl.t,0,9,7)  -- in k
 	 ----print("e "..pl.energy,90,8,7)  -- in k
 
-	 --local wly = (water_level - wy) *8 
-	 --line(0, wly, 127, wly, 11)  
+	 local wly = (water_level - wy) *8 
+	 line(0, wly, 127, wly, 11)  
+	 
+	 printh("pl.y+wy:"..((pl.y+wy)*8).." wl:"..water_level*8)
+	 printh(" "..pl.dy)
  end
 end
 
@@ -1004,7 +1021,7 @@ function solid(x, y)
 			pl.key_count += 1
 			if (sound) sfx(s_key_pickup)
 			--printh(wy.." "..y.." "..water_level)
-	  local replace = wy + y > water_level +1 and w_water_brick or 0		
+	  local replace = wy + y > water_level and w_water_brick or 0		
 			mset(rx+x,ry+y-1, replace)
 			mset(rx+x+1,ry+y-1, replace)
 			mset(rx+x+2,ry+y-1, replace)
@@ -1157,8 +1174,10 @@ function move_actor(a)
 	 -- gravity
 	 if a.y + wy - 1 +1 > water_level then  -- note: +1 for extra row for smooth upward scrolling
 	 	a.dy -= w_g_y * a.mass
+	 	if (a==pl) printh("g>"..a.dy)
 	 else
 	 	a.dy += w_g_y * a.mass
+	 	if (a==pl) printh("g"..a.dy)
 	 end
   --printh(a.dy.."!")
  else
