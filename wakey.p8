@@ -10,7 +10,13 @@ version = 0.9
 
 sound = true
 s_die = 6
--- todo move more sfx here
+s_enemy_kill = 2
+s_key_seq = 14
+s_highlow = 12
+s_key_pickup = 10
+s_drain = 63
+s_start = 5
+s_menu = 19
 
 die_duration = 60
 
@@ -173,7 +179,7 @@ key_seq_each = durer_sequence_length/#key_seq
 function _init(auto)
  last = time()
  if auto then  -- player restart
-		if (sound) sfx(5)  
+		if (sound) sfx(s_start)  
 		_update = _update_game
 		_draw = _draw_game
  else
@@ -447,11 +453,11 @@ function control_player(pl)
  
 	if pl.y+wy < highest - level_size then
 	 points+=level_points
-	 if (sound) sfx(12)
+	 if (sound) sfx(s_highlow)
 	 highest = pl.y+wy 
 	elseif pl.y+wy > lowest + level_size then
 	 points+=level_points
-	 if (sound) sfx(12)
+	 if (sound) sfx(s_highlow)
 	 lowest = pl.y+wy
 	end
 
@@ -546,19 +552,19 @@ end
 function _update_intro()
 	if btnp(❎) then
 		if (sound) music(-1)
-		if (sound) sfx(5)  
+		if (sound) sfx(s_start)  
 		_update = _update_game
 		_draw = _draw_game
 	end
 	if btnp(🅾️) then
-	 if (sound) sfx(19)
+	 if (sound) sfx(s_menu)
 		show_credits = not show_credits
 	end
 end
 
 function _update_success()
 	if btnp(🅾️) then
-	 if (sound) sfx(19)
+	 if (sound) sfx(s_menu)
 		show_credits = not show_credits
 	end
 	if btnp(❎) then
@@ -589,11 +595,11 @@ function _update_game()
  if draining_sequence != nil then
   if water_level < w_h then
 	 	water_level += drain_rate
-			if (sound and flr(water_level%drain_noise_freq)==0) sfx(63)
+			if (sound and flr(water_level%drain_noise_freq)==0) sfx(s_drain)
 	 else
 	 	-- wait for player to leave via drain
 	 	-- todo: new mode + turn off enemies?
-			if (sound) sfx(63, -2)
+			if (sound) sfx(s_drain, -2)
 	 end
  end
 end
@@ -674,7 +680,7 @@ function draw_wake()
 	   then 
 	    --printh("k:"..e.y)
      points+=enemy_kill
-				 if (sound) sfx(2)
+				 if (sound) sfx(s_enemy_kill)
      e.y=-1  -- kill
 	   end	
 			end
@@ -755,7 +761,7 @@ function draw_room()
 				for n in all(seq) do
 					sum += n
 				 kh=key_homes[n]
- 				if (sound and flr(t%key_seq_each)==0) sfx(14)
+ 				if (sound and flr(t%key_seq_each)==0) sfx(s_key_seq)
 				 if #seq ==4 or (#seq == 2 and ss / key_seq_each < 0.6) then
 	 				rect(kh[1]*8,kh[2]*8, (kh[1]+2)*8,(kh[2]+1)*8-1, 10)
  				end
@@ -779,10 +785,11 @@ function draw_room()
 				end
 				
 				if t > durer_sequence_length then
+					if (sound) music(24)
 					durer_sequence = -1
 					-- move to next mode
 					draining_sequence = pl.t
-					if (sound) sfx(63)
+					if (sound) sfx(s_drain)
 				 print("draining...", 48,25, 9)
 				 -- todo give message about finding drain?
 					-- open drain in floor
@@ -999,7 +1006,7 @@ function solid(x, y)
 			-- hide: pick up
 			pl.keys[key] = true
 			pl.key_count += 1
-			if (sound) sfx(10)
+			if (sound) sfx(s_key_pickup)
 			--printh(wy.." "..y.." "..water_level)
 	  local replace = wy + y > water_level +1 and w_water_brick or 0		
 			mset(rx+x,ry+y-1, replace)
@@ -1078,7 +1085,7 @@ function solid_actor(a, dx, dy)
       pl.energy=0
       a2.y=-1  -- kill
       points+=enemy_kill
-					 if (sound) sfx(2)
+					 if (sound) sfx(s_enemy_kill)
 						for i=1,wake_max do
 							wake[i]={-1,-1,-1}
 						end
@@ -1101,7 +1108,7 @@ function solid_actor(a, dx, dy)
       pl.energy=0
       a2.y=-1  -- kill
       points+=enemy_kill
-					 if (sound) sfx(2)
+					 if (sound) sfx(s_enemy_kill)
 						for i=1,wake_max do
 							wake[i]={-1,-1,-1}
 						end
@@ -1143,7 +1150,7 @@ function move_actor(a)
   --printh(a.dx.." "..a.y)
   -- otherwise bounce
   a.dx *= -a.bounce 
-  --sfx(2)
+  --sfx(s_enemy_kill)
  end
 
  -- ditto for y
@@ -1159,7 +1166,7 @@ function move_actor(a)
  else
   a.dy *= -a.bounce 
   --printh(a.dy.."!")
-  --sfx(2)
+  --sfx(s_enemy_kill)
  end
 
  -- apply inertia
@@ -1204,7 +1211,7 @@ function is_complete()
 end
 
 function enter_durer()
- -- does player have any new keys to add?
+ -- does player have any new key(s) to add?
 	for key, got in pairs(pl.keys) do
 		if got then
 		 -- move to this room
@@ -1214,7 +1221,7 @@ function enter_durer()
 			pl.key_count -= 1
 			-- todo perhaps animate key from player to slot
 			--if (sound) music(24)
-			if (sound) sfx(12)
+			if (sound) sfx(s_highlow)
 		end
 	end
 	return true
@@ -1256,7 +1263,7 @@ function player_move_room()
 				if pl.room[1]==0 and pl.room[2]==0 then
 					-- game over
 					if (sound) music(0)
-					--if (sound) sfx(5)  
+					--if (sound) sfx(s_start)  
 					_update = _update_success
 					_draw = _draw_success
 				end
