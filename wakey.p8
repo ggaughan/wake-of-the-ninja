@@ -632,8 +632,8 @@ function draw_actor(a)
  else
 		fy=a.dir==b 
 	end
-	if (fy) printh("flipy")
-	if (a==pl) printh("*"..a.state)
+	--if (fy) printh("flipy")
+	--if (a==pl) printh("*"..a.state)
  if a.state then
 	 spr(anim[a.state][ceil(a.frame)],sx,sy,1,1, fx,fy)
 	else
@@ -940,11 +940,11 @@ function _draw_game()
 	 --print("t "..pl.t,0,9,7)  -- in k
 	 ----print("e "..pl.energy,90,8,7)  -- in k
 
-	 local wly = (water_level - wy) *8 
-	 line(0, wly, 127, wly, 11)  
+	 --local wly = (water_level - wy) *8 
+	 --line(0, wly, 127, wly, 11)  
 	 
-	 printh("pl.y+wy:"..((pl.y+wy)*8).." wl:"..water_level*8)
-	 printh(" "..pl.dy)
+	 --printh("pl.y+wy:"..((pl.y+wy)*8).." wl:"..water_level*8)
+	 --printh(" "..pl.dy)
  end
 end
 
@@ -1174,10 +1174,10 @@ function move_actor(a)
 	 -- gravity
 	 if a.y + wy - 1 +1 > water_level then  -- note: +1 for extra row for smooth upward scrolling
 	 	a.dy -= w_g_y * a.mass
-	 	if (a==pl) printh("g>"..a.dy)
+	 	--if (a==pl) printh("g>"..a.dy)
 	 else
 	 	a.dy += w_g_y * a.mass
-	 	if (a==pl) printh("g"..a.dy)
+	 	--if (a==pl) printh("g"..a.dy)
 	 end
   --printh(a.dy.."!")
  else
@@ -1337,7 +1337,7 @@ function link_room(room, y, d)
 			end
 		end
 	end
-	printh("add "..d.." room "..(y-1).." "..w[y-1][door_pos+d_offset][1]..","..w[y-1][door_pos+d_offset][2])
+	--printh("add "..d.." room "..(y-1).." "..w[y-1][door_pos+d_offset][1]..","..w[y-1][door_pos+d_offset][2])
 end
 
 function make_world_row(y)
