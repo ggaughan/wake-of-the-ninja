@@ -4,6 +4,7 @@ __lua__
 -- init tab
 -----------
 debug = true
+assert_durer = debug
 
 version = 0.9
 
@@ -54,51 +55,76 @@ key_seq = {
 	{9,8},
 	{4,13},
 
-	{4,15,14,1},
-	{9,6,7,12},
-	{5,10,11,8},
+	-- rows
 	{16,3,2,13},
-	
+	{5,10,11,8},
+	{9,6,7,12},
+	{4,15,14,1},
+
+	-- cols
 	{16,5,9,4},
 	{3,10,6,15},
 	{2,11,7,14},
 	{13,8,12,1},
-	
+
+	-- diagonals
 	{16,10,7,1},
 	{4,6,11,13},
-	
+
+	-- pre-corners
+	{5,9,8,12},
+	{3,2,15,14},
+
+	-- corners	
 	{16,13,4,1},
-	
+
+	-- kites	
 	{3,5,11,15},
 	{15,9,7,3},
 	{2,10,8,14},
 	{14,6,12,2},
 
+	-- split rows	
+	{16,3,14,1},
+	{5,10,7,12},
+	{9,6,11,8},
+	{2,13,4,15},
+
+	-- split cols	
+	{16,5,12,1},
+	{3,10,7,14},
+	{2,11,6,15},
+	{9,4,13,8},
+
+	-- cross ways
 	{3,8,14,9},
 	{2,8,15,9},
 	{3,5,12,14},
 	{2,5,12,15},
-	
-	{2,11,6,15},
-	{3,10,7,14},
 
-	{16,5,12,1},
-	{5,9,8,12},
-	{9,4,13,8},
+	-- cross diags	
+	{3,11,6,14},
+	{2,10,7,15},
+	{5,6,11,12},
+	{9,10,7,8},
 	
-	{16,3,14,1},
-	{3,2,15,14},
-	{2,13,4,15},
+	-- y
+	{16,2,10,6},
+	{4,14,6,10},
+	{3,13,11,7},
+	{15,1,7,11},
 		
+	-- quadrants
 	{16,3,5,10},
 	{2,13,11,8},
 	{9,6,4,15},
 	{7,12,14,1},
-	
+
+	-- centre quad	
 	{10,11,6,7},
 }
 if (debug) printh("durer:"..#key_seq)
-key_seq_dur = 1.0  -- seconds each
+key_seq_dur = 0.8  -- seconds each
 
 w_h = 1000
 level_size = w_h / 10
@@ -130,6 +156,7 @@ max_energy = default_energy * max_energy_factor
 
 w_g_y = 0.1  -- gravity
 max_ledge_gap = max_energy_factor
+
 
 if debug then
 	w_h = 100
@@ -198,8 +225,31 @@ function _init(auto)
 	if debug then
 		pl.keys = {true,true,true,true,true,true,true,true,true,true,true,true,true,false,false,true,}
 		pl.key_count = #pl.keys -2  -- 15 and 14 are already in the room
+		
+		if assert_durer then
+		 -- assert key_seq are unique
+			local ksc = {}
+			for ks in all(key_seq) do
+			 local c={}
+			 local sum = 0
+			 for k,v in pairs(ks) do
+				 sum+=v
+			 	c[k]=v
+			 end
+				local kss = strjoin(",",ks)
+			 if (#ks == 4)	assert(sum==34, kss.." != 34")
+				if (#ks == 2) assert(sum==17, kss.." != 17")
+				sort(ks)
+				kss = strjoin(",",ks)  -- sorted - normalised
+				assert(ksc[kss] == nil, kss.." already in keq_seq")
+				ksc[kss]=true
+				--printh("s:"..kss)
+			end
+			--printh("key_seq is unique with #:"..#ksc)
+			--assert(#ksc==#key_seq)
+		end
 	end
-	-- collected and placed in durer room
+	-- collected and placed in durer room - we have 14 key rooms and place 2 already (15 + 14)
 	durer_keys = {false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false}
 
  durer_sequence = nil
@@ -696,7 +746,7 @@ function draw_room()
 				local t = pl.t - durer_sequence
 
 				local si = t\key_seq_each +1
-				printh(si.." "..t..":"..durer_sequence_length.." "..t%key_seq_each)
+				--printh(si.." "..t..":"..durer_sequence_length.." "..t%key_seq_each)
 				local seq = key_seq[si]
 
 				local ss = si*key_seq_each - t  -- countdown
@@ -714,13 +764,11 @@ function draw_room()
 				--printh(ss.." "..key_seq_each.." = "..ss / key_seq_each)
 				if seq != nil then
 				 if #seq == 4 then
-						assert(sum==34)
 	 				if ss / key_seq_each < 0.4 then
 							print("=34", 73,105, 10)
 							scroll_tile(36)
 						end
 				 elseif #seq == 2 then
-							assert(sum==17)
 		 				if ss / key_seq_each < 0.9 then
 								print("17=", 53,105, 10)
 							end
@@ -1513,6 +1561,28 @@ function draw_rwin(_x,_y,_w,_h,_c1,_c2)
  -- top and bottom!
  line(_x+5,_y,_x+_w-5,_y,_c2) -- x top
  line(_x+5,_y+_h,_x+_w-5,_y+_h,_c2) -- x bottom
+end
+
+function sort(a)
+ for i=1,#a do
+  local j = i
+  while j > 1 and a[j-1] > a[j] do
+   a[j],a[j-1] = a[j-1],a[j]
+   j = j - 1
+  end
+ end
+end
+
+function strjoin(delimiter, list)
+ local len = #list
+ if len == 0 then
+  return "" 
+ end
+ local string = list[1]
+ for i = 2, len do 
+  string = string .. delimiter .. list[i] 
+ end
+ return string
 end
 
 __gfx__
