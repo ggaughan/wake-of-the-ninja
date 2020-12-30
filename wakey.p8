@@ -228,7 +228,7 @@ function _init(auto)
 	pl.key_count = 0
 	if debug then
 		--pl.keys = {true,true,true,true,true,true,true,true,true,true,true,true,true,false,false,true,}
-		pl.key_count = #pl.keys -2  -- 15 and 14 are already in the room
+		--pl.key_count = #pl.keys -2  -- 15 and 14 are already in the room
 		
 		if assert_durer then
 		 -- assert key_seq are unique
@@ -414,7 +414,7 @@ function control_player(pl)
 
 	--printh(pl.y + wy + pl.dy - w_g_y .. " .. ".. water_level)	
 	if in_water and pl.y + wy > water_level then
-		printh("swimming")
+		--printh("swimming")
 	 -- todo idle float anim?
 		if pl.state == l then
 			pl.state = l_swim
@@ -425,12 +425,12 @@ function control_player(pl)
 
 	-- todo revisit 
 	local solid_pl
-	printh("so far "..pl.state)
+	--printh("so far "..pl.state)
 	if in_water and pl.y + wy -1 > water_level then
-		printh("falling in water check")
+		--printh("falling in water check")
 		--printh(pl.dy)
 		if pl.dy < -0.1 then
-			printh(" falling up "..pl.dy)
+			--printh(" falling up "..pl.dy)
 			if pl.state != t and pl.state != jump then
 				--solid_pl = solid_a(pl, 0, pl.dy+wdy-w_g_y) 
 				solid_pl = solid_a(pl, 0, pl.dy-w_g_y) 
@@ -440,9 +440,9 @@ function control_player(pl)
 			end
 		end
 	elseif pl.y + wy + 1 < water_level then
-		printh("falling in air check")
+		--printh("falling in air check")
 		if pl.dy > 0.1 then
-			printh(" falling down "..pl.dy)
+			--printh(" falling down "..pl.dy)
 			if pl.state != b and pl.state != jump then
 				--solid_pl = solid_a(pl, 0, pl.dy+wdy+w_g_y) 
 				solid_pl = solid_a(pl, 0, pl.dy+w_g_y) 
@@ -541,7 +541,7 @@ function update_map()
 	  				--local replace = y_w - yy > water_level and w_water_brick or 0
 	  				--local replace = y_w + yy > water_level and w_water_brick or 0
 	  				local replace = wy + yy > water_level and w_water_brick or 0
-	  				printh(replace.." "..y_w.."+"..yy.." "..water_level+1)
+	  				--printh(replace.." "..y_w.."+"..yy.." "..water_level+1)
 			 			mset(rx+xx,ry+yy, replace)
 			 			mset(rx+xx+1,ry+yy, replace)
 		  			mset(rx+xx+2,ry+yy, replace)
@@ -827,7 +827,7 @@ end
 function _draw_intro()
 	cls()
 
- print("can you reach the extremes?", 6, 6, 10)
+ --print("can you reach the extremes?", 6, 6, 10)
 
  map(0,0,0,0,16,16)
 
@@ -1427,7 +1427,7 @@ function make_world(h)
 	end
 
 	if #rooms > 0 then
-		if (debug) printh("*** rooms not added: "..#rooms)
+		if (debug) printh("*** rooms not added automatically: "..#rooms)
 	
 		-- place any leftover rooms - we need them all
 		while #rooms > 0 do
