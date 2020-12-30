@@ -47,8 +47,8 @@ anim={
 enemy_limit = 3
 
 key_homes = {{12,10},{9,4},{6,4},{3,10},{3,6},{6,8},{9,8},{12,6},{3,8},{6,6},{9,6},{12,8},{12,4},{9,10},{6,10},{3,4}}
-drain_rate = 1/8
-drain_noise_freq = 8
+drain_rate = 1/8  -- todo relate to w_h and given time?
+drain_noise_freq = 8 -- "
 key_seq = {
 	{10,7},
 	{11,6},
@@ -129,7 +129,7 @@ key_seq = {
 	-- centre quad	
 	{10,11,6,7},
 }
-if (debug) printh("durer:"..#key_seq)
+if (assert_durer) printh("durer:"..#key_seq)
 key_seq_dur = 0.8  -- seconds each
 
 w_h = 1000
@@ -167,8 +167,8 @@ max_ledge_gap = max_energy_factor
 if debug then
 	w_h = 100
 	max_ledge_gap = 10
-	--key_seq_dur = 0.1
-	drain_rate = 1/2
+	key_seq_dur = 0.1
+	--drain_rate = 1/2
 --w_g_y = 0
 end
 
@@ -482,7 +482,8 @@ function update_enemies()
 end
 
 function update_map()
-	if pl.room == nil then
+ -- for dynamic map changes
+	if pl.room == nil then  
 	 -- note: extra top row for smooth upward scroll
 	 for y=0,16 do  
 			local y_w = ceil(wy)+y
@@ -509,11 +510,10 @@ function update_map()
 			end
 		end
 	else
-	 local rx=pl.room[1]
-	 local ry=pl.room[2]
-
 	 -- if end-game, drain the room
 	 if draining_sequence != nil then
+		 local rx=pl.room[1]
+		 local ry=pl.room[2]
 			for iw=0,14 do
 				if wy+16-iw < water_level then
 				 --printh("d:"..wy+ry-iw.." "..water_level)
@@ -524,32 +524,6 @@ function update_map()
 					end
 				end
 			end
-	 end
-	 -- todo skip if already done? 
-	 -- move to player_move_room?
-	 -- hide keys already collected
-	 for xx=0,15 do
-	 	for yy=0,15 do
-	 		if mget(rx+xx,ry+yy) == 30 then --key
-	 			-- note: +2 digits to right
-	 			local key = get_key_from_map(rx+xx+1,ry+yy)
-	 			if key != nil then
-	 				--printh("k="..key)
-	  			if durer_keys[key] or pl.keys[key] then
-							local y_w = ceil(wy)
-	  				-- hide: already picked up
-	  				--local replace = y_w - yy > water_level and w_water_brick or 0
-	  				--local replace = y_w + yy > water_level and w_water_brick or 0
-	  				local replace = wy + yy > water_level and w_water_brick or 0
-	  				--printh(replace.." "..y_w.."+"..yy.." "..water_level+1)
-			 			mset(rx+xx,ry+yy, replace)
-			 			mset(rx+xx+1,ry+yy, replace)
-		  			mset(rx+xx+2,ry+yy, replace)
-		  		end  
-		  	-- todo assert: key number expected alongside key
-	  		end
-	 		end
-	 	end
 	 end
 	end
 end
@@ -584,11 +558,7 @@ function _update_game()
  control_player(pl)
  update_enemies()
 
- -- todo skip if not changed
- -- todo skip if in other room
  update_map()
- 
- --scroll_tile(10)
  
  purge_enemies()
  spawn_enemies()
@@ -596,7 +566,8 @@ function _update_game()
  foreach(actor, move_actor)
  
  player_move_room()
- 
+
+ -- todo move to update_map()? 
  if draining_sequence != nil then
   if water_level < w_h then
 	 	water_level += drain_rate
@@ -608,8 +579,6 @@ function _update_game()
 	 end
  end
 end
-
-
 
 
 -->8
@@ -724,6 +693,13 @@ end
 
 function draw_room()
  pal(3,1)  -- blue water (spr 10)
+ 
+	if durer_sequence == -1 then
+  if water_level < w_h then
+			scroll_tile(10)
+		end
+	end
+ 
 	if pl.room == nil then
 		-- smooth upward scroll by extra top row with -ve offset
 	 map(0,0,0,-(1-(ceil(wy)-wy))*8,16,17)
@@ -915,14 +891,14 @@ function _draw_game()
  rectfill(8,0, 118,5, 0)
 
 	spr(30, 9,0, 1,1,false,true)
-	print(pl.key_count, 16,0,7)
+	print(pl.key_count, 16,0,10)
 
- print("score:"..points,26,0,7)  -- in k
+ print("score:"..points,28,0,10)  -- in k
 
 	spr(64, 74,-1)
-	print(pl.lives, 82,0,7)
+	print(pl.lives, 83,0,10)
 
- print("e",90,0,7)  
+ print("e",90,0,10)  
  rectfill(94,1, 94+22,4, 5)
  rectfill(94,2, 94+(pl.energy/max_energy)*22,3, pl.energy < low_energy and 8 or 9)
 
@@ -932,8 +908,8 @@ function _draw_game()
 	 --local _test_y = solid_a(pl, 0, pl.dy) 
 	
 	 --print("x "..pl.x,0,120,7)
-	 print("y "..pl.y,48,120,7)
-	 print("wy "..wy,90,120,7)
+	 --print("y "..pl.y,48,120,7)
+	 --print("wy "..wy,90,120,7)
 
 		----print("c "..ceil(wy)-wy, 10,1,7)
 	 
@@ -1264,10 +1240,12 @@ function player_move_room()
 			end
 			if pl.room != nil then
 				--printh(">"..pl.y.." "..scroll_y.." +"..pl.dy)
+			 local rx=pl.room[1]
+			 local ry=pl.room[2]
 				pl.y += scroll_y
 				wy -= scroll_y
 				pl.x = x
-				if pl.room[1]==0 and pl.room[2]==16 then
+				if rx==0 and ry==16 then
 					if enter_durer() then
 					 if durer_sequence == nil and is_complete() then
 					 	-- move to end game animation mode
@@ -1276,13 +1254,39 @@ function player_move_room()
 								if (sound) music(21)
 						end
 					end
-				end
-				if pl.room[1]==0 and pl.room[2]==0 then
+				elseif rx==0 and ry==0 then
 					-- game over
 					if (sound) music(0)
 					--if (sound) sfx(s_start)  
 					_update = _update_success
 					_draw = _draw_success
+				else
+				 -- todo skip if already done? 
+				 -- move to player_move_room?
+				 -- hide keys already collected
+				 for xx=0,15 do
+				 	for yy=0,15 do
+				 		if mget(rx+xx,ry+yy) == 30 then --key
+				 			-- note: +2 digits to right
+				 			local key = get_key_from_map(rx+xx+1,ry+yy)
+				 			if key != nil then
+				 				--printh("k="..key)
+				  			if durer_keys[key] or pl.keys[key] then
+										local y_w = ceil(wy)
+				  				-- hide: already picked up
+				  				--local replace = y_w - yy > water_level and w_water_brick or 0
+				  				--local replace = y_w + yy > water_level and w_water_brick or 0
+				  				local replace = wy + yy > water_level and w_water_brick or 0
+				  				--printh(replace.." "..y_w.."+"..yy.." "..water_level+1)
+						 			mset(rx+xx,ry+yy, replace)
+						 			mset(rx+xx+1,ry+yy, replace)
+					  			mset(rx+xx+2,ry+yy, replace)
+					  		end  
+					  	-- todo assert: key number expected alongside key
+				  		end
+				 		end
+				 	end
+				 end
 				end
  		else
 				assert(false, "expected a room at "..flr(y))
