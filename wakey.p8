@@ -554,11 +554,13 @@ function _update_success()
 	end
 	if btnp(❎) then
 		reload(0x2000, 0x2000, 0x1000)  -- reset doors, key-takes etc.
+		-- todo clear room 0,0 to avoid flash of intro
 		if (sound) music(-1)
 		_init(true)  -- auto start
 	end
 end
 
+_update_fail = _update_success
 
 function _update_game()
  control_player(pl)
@@ -805,6 +807,22 @@ function draw_room()
  pal()
 end
 
+function draw_status()
+ -- top row
+ rectfill(8,0, 118,5, 0)
+
+	spr(30, 9,0, 1,1,false,true)
+	print(pl.key_count, 16,0,10)
+
+ print("score:"..points,28,0,10)  -- in k
+
+	spr(64, 74,-1)
+	print(pl.lives, 83,0,10)
+
+ print("e",90,0,10)  
+ rectfill(94,1, 94+22,4, 5)
+ rectfill(94,2, 94+(pl.energy/max_energy)*22,3, pl.energy < low_energy and 8 or 9)
+end
 
 function _draw_intro()
 	cls()
@@ -884,6 +902,26 @@ function _draw_success()
  end
 end
 
+function _draw_fail()
+	cls()
+	
+ -- todo! pal(12,140,1)
+	draw_room()
+
+	draw_status()
+
+ print("you died", 50, 24, 8)
+
+ print("press 🅾️ for credits", 28, 100, 12)
+ print("press ❎ for restart", 28, 112, 12)
+ 
+ -- todo store high score
+ -- todo store in cart memory
+ 
+ if show_credits then
+  draw_credits()
+ end
+end
 
 function _draw_game()
  cls()
@@ -893,21 +931,7 @@ function _draw_game()
  foreach(actor,draw_actor)
  draw_wake()
 
- -- top row
- rectfill(8,0, 118,5, 0)
-
-	spr(30, 9,0, 1,1,false,true)
-	print(pl.key_count, 16,0,10)
-
- print("score:"..points,28,0,10)  -- in k
-
-	spr(64, 74,-1)
-	print(pl.lives, 83,0,10)
-
- print("e",90,0,10)  
- rectfill(94,1, 94+22,4, 5)
- rectfill(94,2, 94+(pl.energy/max_energy)*22,3, pl.energy < low_energy and 8 or 9)
-
+	draw_status()
 
 	if debug then 
 	 -- no use?:
@@ -1250,7 +1274,6 @@ function player_move_room()
 				elseif rx==0 and ry==0 then
 					-- game over
 					if (sound) music(0)
-					--if (sound) sfx(s_start)  
 					if (debug) printh("enemies:"..#enemy)
 					if (debug) printh("actors:"..#actor)
 					_update = _update_success
@@ -1527,6 +1550,13 @@ function kill_player()
  pl.t=0
  pl.energy=0
  clear_wake()
+ pl.lives-=1
+ if pl.lives <= 0 then
+		-- game over
+		if (sound) music(23)
+		_update = _update_fail
+		_draw = _draw_fail
+	end
 end
 
 -->8
