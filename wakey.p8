@@ -27,6 +27,7 @@ idle="idle"
 falling="falling"
 jump="jump"
 die="die"
+enemy_die="enemy_die"
 -- note: animates from ceil(0.1..<#) 
 -- todo pad all > 1 to 4?
 anim={
@@ -42,9 +43,11 @@ anim={
 	die={132,133,134},
 	
 	["enemy"]={97},
+	enemy_die={94,95,112},
 }
 
 enemy_limit = 3
+enemy_die_duration = 15
 
 key_homes = {{12,10},{9,4},{6,4},{3,10},{3,6},{6,8},{9,8},{12,6},{3,8},{6,6},{9,6},{12,8},{12,4},{9,10},{6,10},{3,4}}
 drain_rate = 1/8  -- todo relate to w_h and given time?
@@ -133,6 +136,8 @@ if (assert_durer) printh("durer:"..#key_seq)
 key_seq_dur = 0.8  -- seconds each
 
 w_h = 1000
+room_margin = 8  -- e.g. 4 -> leave top and bottom 1/4 free of rooms
+room_chance = 0.92  -- todo adjust if room_margin or w_h changes
 level_size = w_h / 10
 level_points = 50
 w_default_brick = 59
@@ -163,10 +168,13 @@ max_energy = default_energy * max_energy_factor
 w_g_y = 0.1  -- gravity
 max_ledge_gap = max_energy_factor
 
+points_limit = 32000
 
 if debug then
 	w_h = 100
-	max_ledge_gap = 10
+	room_margin = 20  
+ room_chance = 0.05 
+	max_ledge_gap = 10 -- < max_energy = too easy
 	key_seq_dur = 0.1
 	--drain_rate = 1/2
 --w_g_y = 0
@@ -194,14 +202,12 @@ function _init(auto)
  wy=(w_h/2)
 	wdy = 0
  water_level = wy + pl_start_y+3 
- room_margin = 8  -- e.g. 4 -> leave top and bottom 1/4 free of rooms
- room_chance = 0.92  -- todo adjust if room_margin or w_h changes
- assert(room_margin > 2)
  room_range_start = w_h/room_margin
 	room_range_end = (w_h - w_h/room_margin)
  wx=0
 	last_ledge = 0
  assert(abs(last_ledge - (water_level+3)) > max_ledge_gap*2, "max_ledge_gap needs to be smaller to place key room")
+	assert(room_margin > 2)
  
 	make_world(w_h)
 
@@ -227,8 +233,8 @@ function _init(auto)
 	pl.keys = {false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false}
 	pl.key_count = 0
 	if debug then
-		--pl.keys = {true,true,true,true,true,true,true,true,true,true,true,true,true,false,false,true,}
-		--pl.key_count = #pl.keys -2  -- 15 and 14 are already in the room
+		pl.keys = {true,true,true,true,true,true,true,true,true,true,true,true,true,false,false,true,}
+		pl.key_count = #pl.keys -2  -- 15 and 14 are already in the room
 		
 		if assert_durer then
 		 -- assert key_seq are unique
@@ -607,7 +613,7 @@ function draw_actor(a)
 	 spr(anim[a.state][ceil(a.frame)],sx,sy,1,1, fx,fy)
 	else
 		-- todo default per actor
-	 spr(0,sx,sy,1,1, fx,fy)
+	 spr(122 and debug or 0,sx,sy,1,1, fx,fy)
 	end
 	
 -- if debug then
@@ -651,17 +657,17 @@ function draw_wake()
 	  --if (debug) rect(ox-ow,oy-oh,ox+ow,oy+oh, 11)
 	  -- check if any enemies are killed by this
 			for e in all(enemy) do
-	   local x=ox - e.x*8-4
-	   local y=oy - e.y*8-4
-    --printh("k?:"..x..","..y..":"..ow+e.w.." "..oh+e.h)
-	   if ((abs(x) < (ow*2+e.w)) and
-	      (abs(y) < (oh*2+e.h)))
-	   then 
-	    --printh("k:"..e.y)
-     points+=enemy_kill
-				 if (sound) sfx(s_enemy_kill)
-     e.y=-1  -- kill
-	   end	
+			 if e.state != enemy_die then
+		   local x=ox - e.x*8-4
+		   local y=oy - e.y*8-4
+	    --printh("k?:"..x..","..y..":"..ow+e.w.." "..oh+e.h)
+		   if ((abs(x) < (ow*2+e.w)) and
+		      (abs(y) < (oh*2+e.h)))
+		   then 
+					 kill_enemy(e)
+		   end	
+		  -- else let pass through
+	   end
 			end
 	  fillp()
 	 -- else don't draw old ones
@@ -996,8 +1002,8 @@ function solid(x, y)
 			pl.keys[key] = true
 			pl.key_count += 1
 			if (sound) sfx(s_key_pickup)
-			--printh(wy.." "..y.." "..water_level)
-	  local replace = wy + y > water_level and w_water_brick or 0		
+			printh(wy.." "..y.." "..water_level)
+	  local replace = flr(wy) + y > water_level and w_water_brick or 0		
 			mset(rx+x,ry+y-1, replace)
 			mset(rx+x+1,ry+y-1, replace)
 			mset(rx+x+2,ry+y-1, replace)
@@ -1050,7 +1056,6 @@ function solid_actor(a, dx, dy)
   	-- todo perhaps skip if both mass==0 (i.e. enemy + enemy pass through)
   	-- todo or, just don't call if mass==0 and pl must test enemy hits
   	--        so then if a=pl and a2=enemy = simple?
-  
    local x=(a.x+dx) - a2.x
    local y=(a.y+dy) - a2.y
    if ((abs(x) < (a.w+a2.w)) and
@@ -1067,18 +1072,12 @@ function solid_actor(a, dx, dy)
      a.dx = v/2
      a2.dx = v/2
      if a==pl and is_enemy(a2) then
+	     if (a2.state == enemy_die) return false
       if pl.state!=die then
-	      if (sound) sfx(s_die)
-	      pl.state=die
-	      pl.dy=0
-	      pl.t=0
-	      pl.energy=0
+	      kill_player()
 	     -- else already dying
 	     end
-      a2.y=-1  -- kill
-      points+=enemy_kill
-					 if (sound) sfx(s_enemy_kill)
-					 clear_wake()
+	     kill_enemy(a2)
 					 --printh("wend die x")
      	--printh("die")    	
 	    end
@@ -1091,18 +1090,12 @@ function solid_actor(a, dx, dy)
      a.dy=v/2
      a2.dy=v/2
      if a==pl and is_enemy(a2) then
+	     if (a2.state == enemy_die) return false
 	     if pl.state!=die then
-	      if (sound) sfx(s_die)
-	      pl.state=die
-	      pl.t=0
-	      pl.dy=0
-	      pl.energy=0
+	      kill_player()
 	     -- else already dying
 	     end
-      a2.y=-1  -- kill
-      points+=enemy_kill
-					 if (sound) sfx(s_enemy_kill)
-					 clear_wake()
+      kill_enemy(a2)
 					 --printh("wend die y")
      	--printh("die")    	
 	    end
@@ -1258,6 +1251,8 @@ function player_move_room()
 					-- game over
 					if (sound) music(0)
 					--if (sound) sfx(s_start)  
+					if (debug) printh("enemies:"..#enemy)
+					if (debug) printh("actors:"..#actor)
 					_update = _update_success
 					_draw = _draw_success
 				else
@@ -1272,11 +1267,11 @@ function player_move_room()
 				 			if key != nil then
 				 				--printh("k="..key)
 				  			if durer_keys[key] or pl.keys[key] then
-										local y_w = ceil(wy)
+										local y_w = ceil(wy)  -- todo remove!
 				  				-- hide: already picked up
 				  				--local replace = y_w - yy > water_level and w_water_brick or 0
 				  				--local replace = y_w + yy > water_level and w_water_brick or 0
-				  				local replace = wy + yy > water_level and w_water_brick or 0
+				  				local replace = flr(wy) + yy > water_level and w_water_brick or 0
 				  				--printh(replace.." "..y_w.."+"..yy.." "..water_level+1)
 						 			mset(rx+xx,ry+yy, replace)
 						 			mset(rx+xx+1,ry+yy, replace)
@@ -1314,7 +1309,7 @@ function player_move_room()
 		-- note: assume we did change room
 		for e in all(enemy) do
 		  -- no points
-    e.y=-1  -- kill
+    e.y=-1  -- disappear
 		end
 	 clear_wake()	
 	end
@@ -1505,7 +1500,7 @@ function purge_enemies()
 	for e in all(enemy) do
 		-- todo add slack / keep some
 		--      and/or add timer deaths
-		if e.y < 0 or e.y > 15 or e.x < 0 or e.x > 15 then
+		if e.y < 0 or e.y > 15 or e.x < 0 or e.x > 15 or (e.state==enemy_die and e.t > enemy_die_duration) then
 		 --printh("purge "..e.y)
 		 del(actor, e)
 			del(enemy, e)
@@ -1516,6 +1511,24 @@ end
 function is_enemy(a)
 	return a.mass == 0 -- for now
 end
+
+function kill_enemy(a)
+ --printh("k:"..e.y)
+ if (points < points_limit) points+=enemy_kill
+ if (sound) sfx(s_enemy_kill)
+	a.state=enemy_die
+	a.t = 0
+end
+
+function kill_player()
+ if (sound) sfx(s_die)
+ pl.state=die
+ pl.dy=0
+ pl.t=0
+ pl.energy=0
+ clear_wake()
+end
+
 -->8
 -- support library
 
