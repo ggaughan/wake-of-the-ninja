@@ -516,8 +516,8 @@ function update_map()
 					mset(x,y,dr[x+1])
 				end
 			end
-		 if (debug and w[y_w] and w[y_w][-1]) mset(7,y,119) --print(w[y_w][-1][0], 7*8,y*8,10) 
-		 if (debug and w[y_w] and w[y_w][16]) mset(8,y,121)	 
+		 --if (debug and w[y_w] and w[y_w][-1]) mset(7,y,119)  
+		 --if (debug and w[y_w] and w[y_w][16]) mset(8,y,121)	 
 		end
 	else
 	 -- if end-game, drain the room
@@ -893,13 +893,12 @@ function _draw_success()
 	end
  spr(152,1*8,15*8)
 
- print("you escaped the tower", 30, 12, 10)
- print("well done!", 52, 26, 10)
+ print("you escaped the tower", 24, 12, 10)
+ print("with a score of "..points, 26, 20,7)  
+ print("well done!", 46, 30, 10)
 
  print("press 🅾️ for credits", 28, 100, 12)
  print("press ❎ for restart", 28, 112, 12)
-
- print("score:"..points,26,0,7)  -- in k
  
  -- todo store high score
  -- todo store in cart memory
