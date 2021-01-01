@@ -19,6 +19,7 @@ s_start = 5
 s_menu = 19
 
 die_duration = 60
+game_over_delay = 60
 
 t,r,b,l="t","r","b","l"
 l_swim="l_swim"
@@ -172,11 +173,11 @@ max_ledge_gap = max_energy_factor
 points_limit = 32000
 
 if debug then
-	w_h = 100
-	room_margin = 20  
- room_chance = 0.05 
-	max_ledge_gap = 10 -- < max_energy = too easy
-	key_seq_dur = 0.1
+	--w_h = 100
+	--room_margin = 20  
+ --room_chance = 0.05 
+	--max_ledge_gap = 10 -- < max_energy = too easy
+	--key_seq_dur = 0.1
 	--drain_rate = 1/2
 --w_g_y = 0
 end
@@ -557,12 +558,13 @@ function _update_success()
 	 if (sound) sfx(s_menu)
 		show_credits = not show_credits
 	end
-	if btnp(❎) then
+	if btnp(❎) and pl.t > game_over_delay then
 		reload(0x2000, 0x2000, 0x1000)  -- reset doors, key-takes etc.
 		-- todo clear room 0,0 to avoid flash of intro
 		if (sound) music(-1)
 		_init(true)  -- auto start
 	end
+	pl.t += 1
 end
 
 _update_fail = _update_success
@@ -661,12 +663,13 @@ function draw_wake()
 	  local c = pl.t - wk[3] 
 	  c = wake_colour[c%#wake_colour+1]
 	  ovalfill(ox-ow,oy-oh,ox+ow,oy+oh, c)
-	  --if (debug) rect(ox-ow,oy-oh,ox+ow,oy+oh, 11)
+	  if (debug) rect(ox-ow,oy-oh,ox+ow,oy+oh, 11)
 	  -- check if any enemies are killed by this
 			for e in all(enemy) do
 			 if e.state != enemy_die then
 		   local x=ox+ow - ((e.x)*8-4)
 		   local y=oy+oh - ((e.y)*8-4)
+			  if (debug) rect(e.x*8-(e.w*8),e.y*8-(e.h*8),e.x*8+4,e.y*8+4, 14)
 	    --printh("k?:"..x..","..y..":"..ow+e.w.." "..oh+e.h)
 		   if ((abs(x) < (ow*1.8+e.w*8)) and
 		      (abs(y) < (oh*1.8+e.h*8)))
@@ -1263,7 +1266,6 @@ function enter_durer()
 			pl.keys[key] = false
 			pl.key_count -= 1
 			-- todo perhaps animate key from player to slot
-			--if (sound) music(24)
 			if (sound) sfx(s_highlow)
 		end
 	end
@@ -1310,8 +1312,9 @@ function player_move_room()
 					if (sound) music(0)
 					if (debug) printh("enemies:"..#enemy)
 					if (debug) printh("actors:"..#actor)
-					_update = _update_success
 					_draw = _draw_success
+					pl.t = 0
+					_update = _update_success
 				else
 				 -- todo skip if already done - set room flag 
 				 -- convert items on map into dynamic objects
@@ -1627,8 +1630,9 @@ function kill_player()
  if pl.lives <= 0 then
 		-- game over
 		if (sound) music(23)
-		_update = _update_fail
 		_draw = _draw_fail
+		pl.t = 0
+		_update = _update_fail
 	end
 end
 
@@ -1731,6 +1735,13 @@ function clear_wake()
 		wake[i]={-1,-1,-1}
 	end
 end
+
+function wait(a) 
+	for i = 1,a do
+		flip() 
+ end
+end
+
 __gfx__
 00012000606660666066606660666066606660666066606616666661feeeeee87bbbbbb30000004000000030000300000b0dd030777777674f9f4fff7999a999
 07d1257000000000000000000000000000000000007777006d6666d6e8888882b3333331040000000300000003000030d3000b0d76777777fffff9f49999979a
