@@ -29,6 +29,7 @@ falling="falling"
 jump="jump"
 die="die"
 enemy_die="enemy_die"
+enemy_missile="enemy_missile"
 -- note: animates from ceil(0.1..<#) 
 -- todo pad all > 1 to 4?
 anim={
@@ -45,11 +46,14 @@ anim={
 	
 	["enemy"]={97},
 	enemy_die={94,95,112},
+
+	[enemy_missile]={170},  
 }
 
 enemy_limit = 3
 enemy_die_duration = 15
 persist_mass = 2
+enemy_chance = 0.99
 
 key_homes = {{12,10},{9,4},{6,4},{3,10},{3,6},{6,8},{9,8},{12,6},{3,8},{6,6},{9,6},{12,8},{12,4},{9,10},{6,10},{3,4}}
 drain_rate = 1/8  -- todo relate to w_h and given time?
@@ -179,6 +183,7 @@ if debug then
 	--max_ledge_gap = 10 -- < max_energy = too easy
 	--key_seq_dur = 0.1
 	--drain_rate = 1/2
+	enemy_chance = 0.995
 --w_g_y = 0
 end
 
@@ -1265,8 +1270,9 @@ function enter_durer()
 			points+=key_points
 			pl.keys[key] = false
 			pl.key_count -= 1
-			-- todo perhaps animate key from player to slot
 			if (sound) sfx(s_highlow)
+			-- todo perhaps animate key from player to slot
+			-- or flash via new_keys[]
 		end
 	end
 	return true
@@ -1565,12 +1571,14 @@ function spawn_enemies()
 		 local accel = 0.2
 			local in_water = pl.y + wy + pl.dy - w_g_y +1 > water_level 
 	 
-			if rnd() > 0.99 then
+			if rnd() > enemy_chance then
 			 x = flr(rnd(13)) + 1.5  -- i.e. in lanes (so player can hide at edges)
 				e = make_enemy(x, -1)
+				e.state = enemy_missile
 			 if in_water then
 				 e.y = 0
 					e.dy += accel 
+					e.dir=b
 				else
 				 e.y = 15 
 					e.dy -= accel 
