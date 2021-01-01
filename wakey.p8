@@ -177,12 +177,16 @@ max_ledge_gap = max_energy_factor
 points_limit = 32000
 
 if debug then
-	--w_h = 100
-	--room_margin = 20  
- --room_chance = 0.05 
-	--max_ledge_gap = 10 -- < max_energy = too easy
+	if true then -- small
+		w_h = 100
+		room_margin = 20  
+  room_chance = 0.05 
+	 max_ledge_gap = 10 -- < max_energy = too easy
+	end
+	if true then -- fast finish
 	--key_seq_dur = 0.1
 	--drain_rate = 1/2
+	end
 	enemy_chance = 0.995
 --w_g_y = 0
 end
