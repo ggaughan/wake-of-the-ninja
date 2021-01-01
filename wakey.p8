@@ -658,7 +658,7 @@ function draw_wake()
 			end
 	  --printh("  "..ox-ow..","..oy-oh..","..ox+ow..","..oy+oh)
 	  local c = pl.t - wk[3] 
-	  c = wake_colour[c%#wake_colour]
+	  c = wake_colour[c%#wake_colour+1]
 	  ovalfill(ox-ow,oy-oh,ox+ow,oy+oh, c)
 	  --if (debug) rect(ox-ow,oy-oh,ox+ow,oy+oh, 11)
 	  -- check if any enemies are killed by this
