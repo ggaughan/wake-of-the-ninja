@@ -48,6 +48,7 @@ anim={
 
 enemy_limit = 3
 enemy_die_duration = 15
+persist_mass = 2
 
 key_homes = {{12,10},{9,4},{6,4},{3,10},{3,6},{6,8},{9,8},{12,6},{3,8},{6,6},{9,6},{12,8},{12,4},{9,10},{6,10},{3,4}}
 drain_rate = 1/8  -- todo relate to w_h and given time?
@@ -666,7 +667,10 @@ function draw_wake()
 		   if ((abs(x) < (ow*2+e.w)) and
 		      (abs(y) < (oh*2+e.h)))
 		   then 
-					 kill_enemy(e)
+		    if e.mass != persist_mass then
+						 kill_enemy(e)
+						-- else we can't kill these
+						end
 		   end	
 		  -- else let pass through
 	   end
@@ -980,6 +984,7 @@ function make_actor(x, y)
  a.t = 0
  a.inertia = 0.6
  a.bounce  = 1
+ a.is_enemy = false
  --a.frames=2
  
  -- half-width and half-height
@@ -1095,13 +1100,14 @@ function solid_actor(a, dx, dy)
      v=a.dx + a2.dy
      a.dx = v/2
      a2.dx = v/2
-     if a==pl and is_enemy(a2) then
+     if a==pl and a2.is_enemy then
 	     if (a2.state == enemy_die) return false
       if pl.state!=die then
 	      kill_player()
 	     -- else already dying
 	     end
-	     kill_enemy(a2)
+	     if (a2.mass == 0) kill_enemy(a2)  -- don't kill persist
+	     -- todo respawn player elsewhere if mass!=0
 					 --printh("wend die x")
      	--printh("die")    	
 	    end
@@ -1113,13 +1119,14 @@ function solid_actor(a, dx, dy)
      v=a.dy + a2.dy
      a.dy=v/2
      a2.dy=v/2
-     if a==pl and is_enemy(a2) then
+     if a==pl and a2.is_enemy then
 	     if (a2.state == enemy_die) return false
 	     if pl.state!=die then
 	      kill_player()
 	     -- else already dying
 	     end
-      kill_enemy(a2)
+	     if (a2.mass == 0) kill_enemy(a2)  -- don't kill persist
+	     -- todo respawn player elsewhere if mass!=0
 					 --printh("wend die y")
      	--printh("die")    	
 	    end
@@ -1165,13 +1172,16 @@ function move_actor(a)
  if not solid_a(a, 0, a.dy) then
   a.y += a.dy
 	 -- gravity
-	 if a.y + wy - 1 +1 > water_level then  -- note: +1 for extra row for smooth upward scrolling
-	 	a.dy -= w_g_y * a.mass
-	 	--if (a==pl) printh("g>"..a.dy)
-	 else
-	 	a.dy += w_g_y * a.mass
-	 	--if (a==pl) printh("g"..a.dy)
-	 end
+	 if not a.is_enemy then  -- specifically a.mass==persist_mass
+		 if a.y + wy - 1 +1 > water_level then  -- note: +1 for extra row for smooth upward scrolling
+		 	a.dy -= w_g_y * a.mass
+		 	--if (a==pl) printh("g>"..a.dy)
+		 else
+		 	a.dy += w_g_y * a.mass
+		 	--if (a==pl) printh("g"..a.dy)
+		 end	 
+		 -- else no gravity for enemies - yet
+		end
   --printh(a.dy.."!")
  else
   a.dy *= -a.bounce 
@@ -1241,6 +1251,7 @@ function player_move_room()
 	if pl.x < 0.5 or pl.x > 15.5 then
 		if (sound) music(-1)
 	 if pl.room == nil then
+			clear_enemies()
 			local in_water = pl.y + wy + pl.dy - w_g_y +1 > water_level 
 		 -- note: +1 for extra row for upward scroll
 			local y = pl.y + wy +1
@@ -1282,9 +1293,18 @@ function player_move_room()
 				 -- todo skip if already done? 
 				 -- move to player_move_room?
 				 -- hide keys already collected
+				 -- spawn room enemies
 				 for xx=0,15 do
 				 	for yy=0,15 do
-				 		if mget(rx+xx,ry+yy) == 30 then --key
+				 	 if mget(rx+xx,ry+yy) == 97 then --enemy
+				 			mset(rx+xx,ry+yy, 0) 
+								local e = make_enemy(xx+0.5, yy+0.5)
+								e.dx = 0.12
+								e.mass = persist_mass  -- bounce around - persist
+								e.bounce = 1
+								add(enemy, e)
+								if (debug)	printh("add "..e.dy.." "..e.x.." "..e.mass)			 			
+				 		elseif mget(rx+xx,ry+yy) == 30 then --key
 				 			-- note: +2 digits to right
 				 			local key = get_key_from_map(rx+xx+1,ry+yy)
 				 			if key != nil then
@@ -1310,6 +1330,7 @@ function player_move_room()
 				assert(false, "expected a room at "..flr(y))
 			end
 		else  -- in a room, return to main shaft
+			clear_enemies()
 			local x = pl.x
 			if pl.x < 0.5 then
 				pl.room = nil
@@ -1330,10 +1351,6 @@ function player_move_room()
 		end
 		
 		-- note: assume we did change room
-		for e in all(enemy) do
-		  -- no points
-    e.y=-1  -- disappear
-		end
 	 clear_wake()	
 	end
 end
@@ -1413,7 +1430,7 @@ function make_world(h)
 	rooms={
 		{16,0},
 		{32,0},
-		{48,0},
+		--todo temp {48,0},
 		{64,0},
 		{80,0},
 		{96,0},
@@ -1428,6 +1445,9 @@ function make_world(h)
 		{112,16},
 		
 	 {0,16}, -- end: will be placed near start
+
+		{48,0},  --temp debug
+
 	}
 
 	w[0] = {}
@@ -1487,9 +1507,10 @@ end
 
 function make_enemy(x, y)
 	e = make_actor(x, y)
+	e.is_enemy = true
 	e.state="enemy"
 	e.frame=1
-	e.mass = 0.0
+	e.mass = 0.0  -- default = pass through
 	e.inertia = 1.0
 	e.bounce = -1.0
 	return e
@@ -1531,8 +1552,20 @@ function purge_enemies()
 	end
 end
 
-function is_enemy(a)
-	return a.mass == 0 -- for now
+function clear_enemies()
+		for e in all(enemy) do
+    if e.mass != 0 then
+    	-- persist - put back in room map
+ 				if pl.room != nil then
+					 local rx=pl.room[1]
+					 local ry=pl.room[2]
+					 printh("set "..e.x..","..e.y)
+			 	 mset(flr(rx+e.x),flr(ry+e.y), 97)
+ 				end
+    end
+		  -- no points
+    e.y=-1  -- disappear (via purge)
+		end
 end
 
 function kill_enemy(a)
@@ -1931,9 +1964,9 @@ __map__
 003f3f3f3feee9eeeae13f3f3f3f0000010000000000000000000000000000010f00000000000000000000000000000f0d00000000000000000000000000000d3d00000000000000000000000000003d0e00000000000000000000000000000e010000000000000000000000000000015a00000000005a5a5a5a5a000000005a
 003f3f3f3f3f3f3f3f3f3f3f3f3f0000010000000000000000000000000000010f00000000000000000000000000000f0d00000000000000000000000000000d3d00000000000000000000000000003d0e00000000000000000000000000000e010000000000000000000000000000015a00000000000000000000000000005a
 00000000000000000000000000000000010000000000000000000000000000010f00000000000000000000000000000f0d0d0d0d0d0d0d00000d0d0d0d0d0d0d3d00000000000000000000000000003d0e00000000000000000000000000000e010000000000000000000000000000015a00000000000000000000000000005a
-000000000000000000000000000000000100000000001ed1d2000000000000010f00000000000000000000000000000f0d00000000000000000000000000770d3d00000000000000000000000000003d0e00000000000000000000000000000e010000000000000000000000000000015a00000000000000000000000000005a
+000000000000000000000000000000000100000000001ed1d2000000000000010f00000000000000000000000000000f0d00000000000000000000000000610d3d00000000000000000000000000003d0e00000000000000000000000000000e010000000000000000000000000000015a00000000000000000000000000005a
 00000000000000000000000000000000010000010101010101010101000000010f00000000000000000000000000000f0d0d0d0d00000d0d0d0d00000d0d0d0d3d00000000000000000000000000003d0e00000000003f0000003f000000000e010000000000000000000000000000015a00000000000000000000000000005a
-00000000000000000000000000000000010000000000000000000000000000010f00000000000000000000000000000f0d79000000000000000000000000000d3d00000000000000000000000000003d0e00000000003f0000003f000000000e010000000000000000000000000000015a00000000000000000000000000005a
+00000000000000000000000000000000010000000000000000000000000000010f00000000000000000000000000000f0d61000000000000000000000000000d3d00000000000000000000000000003d0e00000000003f0000003f000000000e010000000000000000000000000000015a00000000000000000000000000005a
 00000000000000000000000000000000010000000000000000000000000000010f00000000000000000000000000000f0d0d0d0d0d0d0d00000d0d0d0d0d0d0d3d00000000000000000000000000003d0e00000000003f1ec0d93f000000000e010000000000000000000000000000015a00000000000000000000000000005a
 00000000000000000000000000000000010000000000000000000000000000010f00000000000000000000000000000f0d00000000000000000000000000000d3d00000000000000000000000000003d0e00000000003f3f3f3f3f000000000e010000000000000000000000000000015a00000000000000000000000000005a
 00000000000000000000000000000000010101010101010101010101010101010f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e010101010101010101010101010101015a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a
