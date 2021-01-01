@@ -208,6 +208,7 @@ function _init(auto)
 	durer_room_y = water_level+3
  wx=0
 	last_ledge = 0
+ extra_lives=2
  assert(abs(last_ledge - (water_level+3)) > max_ledge_gap*2, "max_ledge_gap needs to be smaller to place key room")
 	assert(room_margin > 2)
 	 
@@ -1012,6 +1013,22 @@ function solid(x, y, is_player)
  --camera(0, 8-(ceil(wy)-wy)*10)
  if pl.room == nil then
 	 val=mget(x, y)
+
+	 if is_player then
+	  -- pick up things - todo move elsewhere?
+			if val == 64 then --extra life
+				if (sound) sfx(s_key_pickup)  --todo
+				local y_w = ceil(wy)+y
+				local dr = w_default_row
+			 if y_w > water_level then
+				 dr = w_default_row_water
+		 	end	
+				assert(w[flr(y_w)][flr(x)] == 64)
+				w[flr(y_w)][flr(x)] = dr[flr(x)+1]
+				mset(flr(x),flr(y),dr[flr(x)+1])
+				pl.lives += 1
+	 	end
+		end
 	else
 		-- offset to a room
 	 local rx=pl.room[1]
@@ -1465,6 +1482,7 @@ function make_world(h)
 	}
 
 	w[0] = {}
+	w[1] = {}  -- prepare for extra life
 	w[h-1] = {}  -- prepare for end drain
 	w[h] = {}
 	for i=0,15 do
@@ -1472,6 +1490,14 @@ function make_world(h)
 	 w[h][i] = w_default_brick  -- floor
 	end
 	w[h-1][15] = 141  -- closed drain
+	if extra_lives > 0 then
+		w[1][7] = 64  -- extra life
+		extra_lives -= 1
+	end
+	if extra_lives > 0 then
+		w[h-1][7] = 64  -- extra life
+		extra_lives -= 1
+	end
 	
 	-- note last_ledge==0 -> need_room
 	-- i.e. pops last room and makes it in fixed location
