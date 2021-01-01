@@ -661,11 +661,11 @@ function draw_wake()
 	  -- check if any enemies are killed by this
 			for e in all(enemy) do
 			 if e.state != enemy_die then
-		   local x=ox - e.x*8-4
-		   local y=oy - e.y*8-4
+		   local x=ox+ow - ((e.x)*8-4)
+		   local y=oy+oh - ((e.y)*8-4)
 	    --printh("k?:"..x..","..y..":"..ow+e.w.." "..oh+e.h)
-		   if ((abs(x) < (ow*2+e.w)) and
-		      (abs(y) < (oh*2+e.h)))
+		   if ((abs(x) < (ow*1.8+e.w*8)) and
+		      (abs(y) < (oh*1.8+e.h*8)))
 		   then 
 		    if e.mass != persist_mass then
 						 kill_enemy(e)
@@ -888,7 +888,7 @@ function _draw_success()
  for wall=0,14 do
   spr(59,0,wall*8)
 	end
- spr(152,0,15*8)
+ spr(152,1*8,15*8)
 
  print("you escaped the tower", 30, 12, 10)
  print("well done!", 52, 26, 10)
@@ -1267,7 +1267,7 @@ function player_move_room()
 				x = 0.5
 			end
 			if pl.room != nil then
-				--printh(">"..pl.y.." "..scroll_y.." +"..pl.dy)
+				--printh("> pl.y "..pl.y.." scroll_y "..scroll_y.." pl.dy "..pl.dy.." wy "..wy)
 			 local rx=pl.room[1]
 			 local ry=pl.room[2]
 				pl.y += scroll_y
@@ -1297,16 +1297,19 @@ function player_move_room()
 				 for xx=0,15 do
 				 	for yy=0,15 do
 				 	 if mget(rx+xx,ry+yy) == 97 then --enemy
-				 	 	--printh(wy.." "..yy.." "..water_level)
-		  				local replace = ceil(wy) + yy + 0.5 > water_level and w_water_brick or 0
-				 			mset(rx+xx,ry+yy, replace) 
-								local e = make_enemy(xx+0.5, yy+0.5)
-								e.dx = 0.12
-								e.mass = persist_mass  -- bounce around - persist
-								e.bounce = 1
-								e.inertia = 1
-								add(enemy, e)
-								--if (debug)	printh("add "..e.x.." "..e.y.." "..e.mass)			 			
+				 	  if xx>0 and yy < 00 and xx < 15 and yy < 15 then
+					 	 	--printh(wy.." "..yy.." "..water_level)
+			  				local replace = ceil(wy) + yy + 0.5 > water_level and w_water_brick or 0
+					 			mset(rx+xx,ry+yy, replace) 
+									local e = make_enemy(xx+0.5, yy+0.5)
+									e.dx = 0.12
+									e.mass = persist_mass  -- bounce around - persist
+									e.bounce = 1
+									e.inertia = 1
+									add(enemy, e)
+									--if (debug)	printh("add "..e.x.." "..e.y.." "..e.mass)			 			
+								-- else leave borders intact (rounding)
+								end
 				 		elseif mget(rx+xx,ry+yy) == 30 then --key
 				 			-- note: +2 digits to right
 				 			local key = get_key_from_map(rx+xx+1,ry+yy)
@@ -1343,9 +1346,10 @@ function player_move_room()
 				x = 0.5
 			end
 			if pl.room == nil then
-				pl.y -= pl.room_old_y 
-				--todo review? pl.dy = 0
-				--printh("<"..pl.y.." "..pl.room_old_y.." +"..pl.dy)
+				printh(wy.." "..water_level)
+				--pl.y -= pl.room_old_y  
+				pl.y = 14.6 - pl.room_old_y  -- restore absolute y rather than relative to current y - less glitchy under water
+				--printh("< pl.y "..pl.y.." pl.room_old_y "..pl.room_old_y.." pl.dy "..pl.dy.." wy "..wy)
 				wy += pl.room_old_y
 				pl.x = x
 			else
@@ -1432,7 +1436,7 @@ function make_world(h)
 	--          - starts with 2 keys 
 	rooms={
 		{16,0},
-		--{32,0},
+		{32,0},
 		{48,0},
 		{64,0},
 		{80,0},
@@ -1449,7 +1453,7 @@ function make_world(h)
 		
 	 {0,16}, -- end: will be placed near start
 
-		{32,0},  --temp debug
+		--{32,0},  --temp debug
 
 	}
 
@@ -1562,7 +1566,7 @@ function clear_enemies()
  				if pl.room != nil then
 					 local rx=pl.room[1]
 					 local ry=pl.room[2]
-					 printh("set "..e.x..","..e.y)
+					 --printh("(re)set "..e.x..","..e.y)
 			 	 mset(flr(rx+e.x-0.5),flr(ry+e.y-0.5), 97)
  				end
     end
