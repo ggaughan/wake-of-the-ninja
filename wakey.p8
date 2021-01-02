@@ -1336,6 +1336,7 @@ function player_move_room()
 		if (sound) music(-1)
 	 if pl.room == nil then
 			clear_enemies()
+			clear_bubbles()
 			local in_water = pl.y + wy + pl.dy - w_g_y +1 > water_level 
 		 -- note: +1 for extra row for upward scroll
 			local y = pl.y + wy +1
@@ -1423,6 +1424,7 @@ function player_move_room()
 			end
 		else  -- in a room, return to main shaft
 			clear_enemies()
+			clear_bubbles()
 			local x = pl.x
 			if pl.x < 0.5 then
 				pl.room = nil
@@ -1650,7 +1652,7 @@ function purge_enemies()
 		-- todo add slack / keep some
 		--      and/or add timer deaths
 		if e.y < 0 or e.y > 15 or e.x < 0 or e.x > 15 or (e.state==enemy_die and e.t > enemy_die_duration) then
-		 --printh("purge "..e.y)
+		 --if (debug) printh("purge "..e.y)
 		 del(actor, e)
 			del(enemy, e)
 		end
@@ -1724,7 +1726,7 @@ function spawn_bubbles()
 					e.dy -= accel 
 					e.dir=t
 					add(bubble, e)
-					if (debug)	printh("add "..e.dy.." "..e.x.." "..e.mass)
+					--if (debug)	printh("add "..e.dy.." "..e.x.." "..e.mass)
 				end
 			end
 		end
@@ -1736,10 +1738,16 @@ function purge_bubbles()
  local wly = (water_level - wy) *8 
 	for e in all(bubble) do
 		if e.y*8 <= wly+4 or e.y > 16 or e.x < 0 or e.x > 15 then
-		 printh("purge "..e.y)
+		 --if (debug) printh("purge "..e.y)
 		 del(actor, e)
 			del(bubble, e)
 		end
+	end
+end
+
+function clear_bubbles()
+	for e in all(bubble) do
+		e.y = 17
 	end
 end
 
