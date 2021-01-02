@@ -16,7 +16,6 @@ if water_effect then
 	--local palarr={[0]=131,3,3,3,3,3,139,11,138,139,11,11,138,139,139,11}
 	--apply secondary display pal
 	pal(palarr,2)
-	poke(0x5f5f,0x10)
 end
 
 sound = true
@@ -195,8 +194,8 @@ if debug then
 	 max_ledge_gap = 10 -- < max_energy = too easy
 	end
 	if true then -- fast finish
-	--key_seq_dur = 0.1
-	--drain_rate = 1/2
+	 key_seq_dur = 0.1
+	 drain_rate = 1/2
 	end
 	--enemy_chance = 0.995
 --w_g_y = 0
@@ -208,6 +207,7 @@ key_seq_each = durer_sequence_length/#key_seq
 
 function _init(auto)
  last = time()
+ 
  if auto then  -- player restart
 		if (sound) sfx(s_start)  
 		_update = _update_game
@@ -733,18 +733,19 @@ end
 function draw_room()
  pal(3,1)  -- blue water (spr 10)
  local wly = (water_level - wy) *8 
- if water_effect then
-	 for i=0,15 do
-		 local dif = wly - i*8
-   local mypoke=0b11111111 << max(dif,0)
-	  poke(0x5f70+i,mypoke)
-	 end
+ if pl.lives > 0 then
+	 if water_effect then
+		 for i=0,15 do
+			 local dif = wly - i*8
+	   local mypoke=0b11111111 << max(dif,0)
+		  poke(0x5f70+i,mypoke)
+		 end
+		end
 	end
  -- water surface
  for x=0,127 do
   pset(x,flr(wly)+sin(x/8+time()*2)/2,1)
  end
-
  
 	if durer_sequence == -1 then
   if water_level < w_h then
@@ -911,6 +912,10 @@ end
 
 function _draw_success()
 	cls()
+
+	if water_effect then
+		poke(0x5f5f,0)  -- off
+	end
 	
  --pal(12,140,1)
  rectfill(0,0, 128, 50, 12)  --sky
@@ -943,6 +948,10 @@ end
 function _draw_fail()
 	cls()
 	
+	if water_effect then
+		poke(0x5f5f,0)  -- off
+	end
+
  -- todo! pal(12,140,1)
 	draw_room()
 
@@ -963,6 +972,10 @@ end
 
 function _draw_game()
  cls()
+
+	if water_effect then
+		poke(0x5f5f,0x10)
+	end
 
 	draw_room()
 
