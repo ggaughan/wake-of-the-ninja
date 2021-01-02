@@ -57,13 +57,16 @@ anim={
 	["enemy"]={97},
 	enemy_die={94,95,112},
 
-	[enemy_missile]={170},  
+	enemy_missile={170},  
+	["bubble"]={108},
 }
 
 enemy_limit = 3
 enemy_die_duration = 15
 persist_mass = 2
 enemy_chance = 0.99
+bubble_limit = 5
+bubble_chance = 0.95
 
 key_homes = {{12,10},{9,4},{6,4},{3,10},{3,6},{6,8},{9,8},{12,6},{3,8},{6,6},{9,6},{12,8},{12,4},{9,10},{6,10},{3,4}}
 drain_rate = 1/8  -- todo relate to w_h and given time?
@@ -195,7 +198,7 @@ if debug then
 	end
 	if true then -- fast finish
 	 key_seq_dur = 0.1
-	 drain_rate = 1/2
+	 --drain_rate = 1/2
 	end
 	--enemy_chance = 0.995
 --w_g_y = 0
@@ -220,6 +223,7 @@ function _init(auto)
 	w = {}	-- shaft world def (sparse)
 	actor = {} --all actors in world
 	enemy = {} --all active enemies (links to actor)
+	bubble = {} -- all active bubbles (links to actor)
 
  wy=(w_h/2)
 	wdy = 0
@@ -257,8 +261,8 @@ function _init(auto)
 	pl.keys = {false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false}
 	pl.key_count = 0
 	if debug then
-		--pl.keys = {true,true,true,true,true,true,true,true,true,true,true,true,true,false,false,true,}
-		--pl.key_count = #pl.keys -2  -- 15 and 14 are already in the room
+		pl.keys = {true,true,true,true,true,true,true,true,true,true,true,true,true,false,false,true,}
+		pl.key_count = #pl.keys -2  -- 15 and 14 are already in the room
 		
 		if assert_durer then
 		 -- assert key_seq are unique
@@ -597,6 +601,8 @@ function _update_game()
  
  purge_enemies()
  spawn_enemies()
+ purge_bubbles()
+ spawn_bubbles()
 
  foreach(actor, move_actor)
  
@@ -772,7 +778,7 @@ function draw_room()
 
 			-- title
 	 	rectfill(40,7, 88, 17, 0)
-	 	rect(40,9, 88, 18, 13)
+	 	rect(40,7, 88, 17, 13)
 		 print("durer", 56,11, 15)
 		 print(".", 59,5, 15)
 		 print(".", 61,5, 15)
@@ -847,7 +853,7 @@ end
 
 function draw_status()
  -- top row
- rectfill(8,0, 119, 7, 5)
+ rectfill(10,0, 117, 5, 5)
 
 	spr(30, 9,0, 1,1,false,true)
 	print(pl.key_count, 16,0,10)
@@ -1032,6 +1038,7 @@ function make_actor(x, y)
  a.inertia = 0.6
  a.bounce  = 1
  a.is_enemy = false
+ a.is_bubble = false
  --a.frames=2
  
  -- half-width and half-height
@@ -1148,68 +1155,72 @@ function solid_actor(a, dx, dy)
  for a2 in all(actor) do
   if a2 != a then
   	-- todo perhaps skip if both mass==0 (i.e. enemy + enemy pass through)
-  	-- todo or, just don't call if mass==0 and pl must test enemy hits
-  	--        so then if a=pl and a2=enemy = simple?
-   local x=(a.x+dx) - a2.x
-   local y=(a.y+dy) - a2.y
-   if ((abs(x) < (a.w+a2.w)) and
-      (abs(y) < (a.h+a2.h)))
-   then 
-    
-    -- moving together?
-    -- this allows actors to
-    -- overlap initially 
-    -- without sticking together    
-    if (dx != 0 and abs(x) <
-        abs(a.x-a2.x)) then
-     v=a.dx + a2.dy
-     a.dx = v/2
-     a2.dx = v/2
-     if a==pl and a2.is_enemy then
-	     if (a2.state == enemy_die) return false
-      if pl.state!=die then
-	      kill_player()
-	     -- else already dying
-	     end
-	     kill_enemy(a2)  -- don't kill persist
-	    elseif a.is_enemy and a2==pl then
-	     if (a.state == enemy_die) return false
-      if pl.state!=die then
-	      kill_player()
-	     -- else already dying
-	     end
-	     kill_enemy(a)  -- don't kill persist
+  	if a.is_bubble or a2.is_bubble then 
+  		-- continue
+  	else
+	  	-- todo or, just don't call if mass==0 and pl must test enemy hits
+	  	--        so then if a=pl and a2=enemy = simple?
+	   local x=(a.x+dx) - a2.x
+	   local y=(a.y+dy) - a2.y
+	   if ((abs(x) < (a.w+a2.w)) and
+	      (abs(y) < (a.h+a2.h)))
+	   then 
+	    
+	    -- moving together?
+	    -- this allows actors to
+	    -- overlap initially 
+	    -- without sticking together    
+	    if (dx != 0 and abs(x) <
+	        abs(a.x-a2.x)) then
+	     v=a.dx + a2.dy
+	     a.dx = v/2
+	     a2.dx = v/2
+	     if a==pl and a2.is_enemy then
+		     if (a2.state == enemy_die) return false
+	      if pl.state!=die then
+		      kill_player()
+		     -- else already dying
+		     end
+		     kill_enemy(a2)  -- don't kill persist
+		    elseif a.is_enemy and a2==pl then
+		     if (a.state == enemy_die) return false
+	      if pl.state!=die then
+		      kill_player()
+		     -- else already dying
+		     end
+		     kill_enemy(a)  -- don't kill persist
+		    end
+	     return true 
 	    end
-     return true 
-    end
-    
-    if (dy != 0 and abs(y) <
-        abs(a.y-a2.y)) then
-     v=a.dy + a2.dy
-     a.dy=v/2
-     a2.dy=v/2
-     if a==pl and a2.is_enemy then
-	     if (a2.state == enemy_die) return false
-	     if pl.state!=die then
-	      kill_player()
-	     -- else already dying
-	     end
-	     kill_enemy(a2)  -- don't kill persist
-	    elseif a.is_enemy and a2==pl then
-	     if (a.state == enemy_die) return false
-      if pl.state!=die then
-	      kill_player()
-	     -- else already dying
-	     end
-	     kill_enemy(a)  -- don't kill persist
+	    
+	    if (dy != 0 and abs(y) <
+	        abs(a.y-a2.y)) then
+	     v=a.dy + a2.dy
+	     a.dy=v/2
+	     a2.dy=v/2
+	     if a==pl and a2.is_enemy then
+		     if (a2.state == enemy_die) return false
+		     if pl.state!=die then
+		      kill_player()
+		     -- else already dying
+		     end
+		     kill_enemy(a2)  -- don't kill persist
+		    elseif a.is_enemy and a2==pl then
+		     if (a.state == enemy_die) return false
+	      if pl.state!=die then
+		      kill_player()
+		     -- else already dying
+		     end
+		     kill_enemy(a)  -- don't kill persist
+		    end
+	     return true 
 	    end
-     return true 
-    end
-    
-    --return true
-    
-   end
-  end
+	    
+	    --return true
+	    
+	   end
+	  end
+	 end
  end
  return false
 end
@@ -1359,6 +1370,7 @@ function player_move_room()
 					-- game over
 					if (sound) music(0)
 					if (debug) printh("enemies:"..#enemy)
+					if (debug) printh("bubbles:"..#bubble)
 					if (debug) printh("actors:"..#actor)
 					_draw = _draw_success
 					pl.t = 0
@@ -1683,6 +1695,51 @@ function kill_player()
 		_draw = _draw_fail
 		pl.t = 0
 		_update = _update_fail
+	end
+end
+
+function make_bubble(x, y)
+	e = make_actor(x, y)
+	e.is_bubble=true
+	e.state="bubble"
+	e.frame=1
+	e.mass = 0.0  -- default = pass through
+	e.inertia = 1.0
+	e.bounce = -1.0
+	return e
+end
+
+function spawn_bubbles()
+ if true then --pl.room == nil then
+	 if #bubble < bubble_limit then
+		 local accel = 0.1
+	 
+			if rnd() > bubble_chance then
+			 local wly = (water_level - wy) 
+			 if wly < 15 then
+				 x = flr(rnd(13)) + 1.5  
+					e = make_bubble(x, -1)
+					e.state = "bubble"
+				 e.y = 15
+					e.dy -= accel 
+					e.dir=t
+					add(bubble, e)
+					if (debug)	printh("add "..e.dy.." "..e.x.." "..e.mass)
+				end
+			end
+		end
+	-- else no bubbles in rooms (for now)
+	end
+end
+
+function purge_bubbles()
+ local wly = (water_level - wy) *8 
+	for e in all(bubble) do
+		if e.y*8 <= wly+4 or e.y > 16 or e.x < 0 or e.x > 15 then
+		 printh("purge "..e.y)
+		 del(actor, e)
+			del(bubble, e)
+		end
 	end
 end
 
