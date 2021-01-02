@@ -11,7 +11,8 @@ version = 0.9
 water_effect = true
 if water_effect then
 	--underwater palette array - thanks @lazydevsacademy - good timing!
-	local palarr={[0]=131,3,2,3,4,3,139,11,8,9,10,11,12,13,14,15}
+	--local palarr={[0]=131,3,2,3,4,3,139,11,8,9,10,11,12,13,14,15}
+	local palarr={[0]=131,3,2,3,4,5,139,11,8,9,10,11,12,13,14,15}
 	--local palarr={[0]=131,3,3,3,3,3,139,11,138,139,11,11,138,139,139,11}
 	--apply secondary display pal
 	pal(palarr,2)
@@ -197,7 +198,7 @@ if debug then
 	--key_seq_dur = 0.1
 	--drain_rate = 1/2
 	end
-	enemy_chance = 0.995
+	--enemy_chance = 0.995
 --w_g_y = 0
 end
 
@@ -256,8 +257,8 @@ function _init(auto)
 	pl.keys = {false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false}
 	pl.key_count = 0
 	if debug then
-		--pl.keys = {true,true,true,true,true,true,true,true,true,true,true,true,true,false,false,true,}
-		--pl.key_count = #pl.keys -2  -- 15 and 14 are already in the room
+		pl.keys = {true,true,true,true,true,true,true,true,true,true,true,true,true,false,false,true,}
+		pl.key_count = #pl.keys -2  -- 15 and 14 are already in the room
 		
 		if assert_durer then
 		 -- assert key_seq are unique
@@ -733,20 +734,9 @@ function draw_room()
  pal(3,1)  -- blue water (spr 10)
  local wly = (water_level - wy) *8 
  if water_effect then
-		--printh(wly.." ")
-	 for i=1,15 do
-	  --local mypoke,dif=0,wly-i*8 
-	  local mypoke=0
+	 for i=0,15 do
 		 local dif = wly - i*8
-	  if dif<=0 then
-	   mypoke=0xff
-	  elseif dif<8 then
-	  	--printh(wly.." "..dif)
-	  	-- todo opt!
-	   mypoke=tonum(sub("0b11111111",1,10-dif)..sub("00000000",1,dif))
-	   --printh("b"..(10-dif).."="..mypoke)
-	   mypoke = 128+mypoke
-	  end
+   local mypoke=0b11111111 << max(dif,0)
 	  poke(0x5f70+i,mypoke)
 	 end
 	end
@@ -781,7 +771,7 @@ function draw_room()
 
 			-- title
 	 	rectfill(40,7, 88, 17, 0)
-	 	rect(40,8, 88, 17, 5)
+	 	rect(40,9, 88, 18, 13)
 		 print("durer", 56,11, 15)
 		 print(".", 59,5, 15)
 		 print(".", 61,5, 15)
@@ -847,13 +837,6 @@ function draw_room()
 					link_room(room, w_h, r)				
 				end
 			end
-	 -- todo remove: handled by routines
---	 elseif rx == 0 and ry==0 then
---	  -- final room (was used for shaft scrolling)
---	  -- dynamically draw now
---		 map(rx,ry,0,0,16,16)
---		 rectfill(9,0, 128, 50, 12)  --sky
---		 rectfill(9,51, 128, 128, 11)  --grass
 		else
 		 map(rx,ry,0,0,16,16)
 	 end
@@ -863,7 +846,7 @@ end
 
 function draw_status()
  -- top row
- rectfill(8,0, 118,5, 0)
+ rectfill(8,0, 119, 7, 5)
 
 	spr(30, 9,0, 1,1,false,true)
 	print(pl.key_count, 16,0,10)
@@ -874,7 +857,7 @@ function draw_status()
 	print(pl.lives, 83,0,10)
 
  print("e",90,0,10)  
- rectfill(94,1, 94+22,4, 5)
+ rectfill(94,1, 94+22,4, 13)
  rectfill(94,2, 94+(pl.energy/max_energy)*22,3, pl.energy < low_energy and 8 or 9)
 end
 
@@ -944,7 +927,7 @@ function _draw_success()
 
  print("you escaped the tower", 24, 12, 10)
  print("with a score of "..points, 26, 20,7)  
- print("well done!", 46, 30, 10)
+ print("top ninja!", 46, 30, 10)
 
  print("press 🅾️ for credits", 28, 100, 12)
  print("press ❎ for restart", 28, 112, 12)
@@ -1072,7 +1055,7 @@ function solid(x, y, is_player)
 				 dr = w_default_row_water
 		 	end	
 				assert(w[flr(y_w)][flr(x)] == 64)
-				w[flr(y_w)][flr(x)] = dr[flr(x)+1]
+				w[flr(y_w)][flr(x)] = nil  -- so can change after drain
 				mset(flr(x),flr(y),dr[flr(x)+1])
 				pl.lives += 1
 	 	end
