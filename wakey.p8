@@ -257,8 +257,8 @@ function _init(auto)
 	pl.keys = {false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false}
 	pl.key_count = 0
 	if debug then
-		pl.keys = {true,true,true,true,true,true,true,true,true,true,true,true,true,false,false,true,}
-		pl.key_count = #pl.keys -2  -- 15 and 14 are already in the room
+		--pl.keys = {true,true,true,true,true,true,true,true,true,true,true,true,true,false,false,true,}
+		--pl.key_count = #pl.keys -2  -- 15 and 14 are already in the room
 		
 		if assert_durer then
 		 -- assert key_seq are unique
@@ -683,16 +683,16 @@ function draw_wake()
 	  local c = pl.t - wk[3] 
 	  c = wake_colour[c%#wake_colour+1]
 	  ovalfill(ox-ow,oy-oh,ox+ow,oy+oh, c)
-	  if (debug) rect(ox-ow,oy-oh,ox+ow,oy+oh, 11)
+	  --if (debug) rect(ox-ow,oy-oh,ox+ow,oy+oh, 11)
 	  -- check if any enemies are killed by this
 			for e in all(enemy) do
 			 if e.state != enemy_die then
-		   local x=ox+ow - ((e.x)*8-4)
-		   local y=oy+oh - ((e.y)*8-4)
-			  if (debug) rect(e.x*8-(e.w*8),e.y*8-(e.h*8),e.x*8+4,e.y*8+4, 14)
-	    --printh("k?:"..x..","..y..":"..ow+e.w.." "..oh+e.h)
-		   if ((abs(x) < (ow*1.8+e.w*8)) and
-		      (abs(y) < (oh*1.8+e.h*8)))
+		   local x=ox - ((e.x)*8)
+		   local y=oy - ((e.y)*8)
+			  --if (debug) rect(e.x*8-(e.w*8),e.y*8-(e.h*8),e.x*8+4,e.y*8+4, 14)
+			  --if (debug) rect(ox,oy,ox+ow,oy+oh, 10)
+		   if ((abs(x) < (ow+e.w*8)) and
+		      (abs(y) < (oh+e.h*8)))
 		   then 
 		    if e.mass != persist_mass then
 						 kill_enemy(e)
@@ -904,7 +904,7 @@ function draw_credits()
 	print("animation", 18,76,13)
 	print("toby hefflin", 63,76,1)
 	
-	print("music by", 18,86,13)
+	print("music", 18,86,13)
 	print("gruber", 87,86,1)
 
 	print("press 🅾️ to close", 32,100,6)
@@ -1171,11 +1171,14 @@ function solid_actor(a, dx, dy)
 	      kill_player()
 	     -- else already dying
 	     end
-	     --todo? if (a2.mass == 0) 
 	     kill_enemy(a2)  -- don't kill persist
-	     -- todo respawn player elsewhere if mass!=0
-					 --printh("wend die x")
-     	--printh("die")    	
+	    elseif a.is_enemy and a2==pl then
+	     if (a.state == enemy_die) return false
+      if pl.state!=die then
+	      kill_player()
+	     -- else already dying
+	     end
+	     kill_enemy(a)  -- don't kill persist
 	    end
      return true 
     end
@@ -1191,11 +1194,14 @@ function solid_actor(a, dx, dy)
 	      kill_player()
 	     -- else already dying
 	     end
-	     -- todo? if (a2.mass == 0) 
 	     kill_enemy(a2)  -- don't kill persist
-	     -- todo respawn player elsewhere if mass!=0
-					 --printh("wend die y")
-     	--printh("die")    	
+	    elseif a.is_enemy and a2==pl then
+	     if (a.state == enemy_die) return false
+      if pl.state!=die then
+	      kill_player()
+	     -- else already dying
+	     end
+	     kill_enemy(a)  -- don't kill persist
 	    end
      return true 
     end
@@ -1365,7 +1371,7 @@ function player_move_room()
 				 for xx=0,15 do
 				 	for yy=0,15 do
 				 	 if mget(rx+xx,ry+yy) == 97 then --enemy
-				 	  if xx>0 and yy > 0 and xx < 15 and yy < 15 then
+				 	  if xx>0.5 and yy > 0.5 and xx < 15 and yy < 15 then
 					 	 	--printh(wy.." "..yy.." "..water_level)
 			  				local replace = ceil(wy) + yy + 0.5 > water_level and w_water_brick or 0
 					 			mset(rx+xx,ry+yy, replace) 
@@ -2047,7 +2053,7 @@ bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 
 __gff__
 000101010181010001000000000101010000000000000000000000000000020000000000000000000000000000000000000000000000000000000001010100010000000000000c0000040400000000000000000000000000000001010101000000000000000000000c0c00000000000000000001000000000000000001000100
-0000000000000000000001010001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000001010101010000000000000000000000000001000100000000000000000000000000010001010000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __map__
 00000000000000000000000000000000010101010101010101010101010101010f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e010101010101010101010101010101015a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a
 00000000000000000000000000000000010000000000000000000000000000010f00000000000000000000000000000f0d00000000000000000000000000000d3d00000000000000000000000000003d0e00000000000000000000000000000e01001ed1d600000061000000000000015a00000000000000000000000000005a
