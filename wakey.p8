@@ -8,6 +8,16 @@ assert_durer = debug
 
 version = 0.9
 
+water_effect = true
+if water_effect then
+	--underwater palette array - thanks @lazydevsacademy - good timing!
+	local palarr={[0]=131,3,2,3,4,3,139,11,8,9,10,11,12,13,14,15}
+	--local palarr={[0]=131,3,3,3,3,3,139,11,138,139,11,11,138,139,139,11}
+	--apply secondary display pal
+	pal(palarr,2)
+	poke(0x5f5f,0x10)
+end
+
 sound = true
 s_die = 6
 s_enemy_kill = 2
@@ -721,6 +731,30 @@ end
 
 function draw_room()
  pal(3,1)  -- blue water (spr 10)
+ local wly = (water_level - wy) *8 
+ if water_effect then
+		--printh(wly.." ")
+	 for i=1,15 do
+	  --local mypoke,dif=0,wly-i*8 
+	  local mypoke=0
+		 local dif = wly - i*8
+	  if dif<=0 then
+	   mypoke=0xff
+	  elseif dif<8 then
+	  	--printh(wly.." "..dif)
+	  	-- todo opt!
+	   mypoke=tonum(sub("0b11111111",1,10-dif)..sub("00000000",1,dif))
+	   --printh("b"..(10-dif).."="..mypoke)
+	   mypoke = 128+mypoke
+	  end
+	  poke(0x5f70+i,mypoke)
+	 end
+	end
+ -- water surface
+ for x=0,127 do
+  pset(x,flr(wly)+sin(x/8+time()*2)/2,1)
+ end
+
  
 	if durer_sequence == -1 then
   if water_level < w_h then
@@ -866,6 +900,8 @@ function _draw_intro()
  if show_credits then
   draw_credits()
  end
+ 
+ --poke(0x5f2c, 5)
 end
 
 function draw_credits()
