@@ -155,6 +155,7 @@ if (assert_durer) printh("durer:"..#key_seq)
 key_seq_dur = 0.8  -- seconds each
 
 w_h = 1000
+w_h = 750
 room_margin = 8  -- e.g. 4 -> leave top and bottom 1/4 free of rooms
 room_chance = 0.92  -- todo adjust if room_margin or w_h changes
 level_size = w_h / 10
@@ -190,7 +191,7 @@ max_ledge_gap = max_energy_factor
 points_limit = 32000
 
 if debug then
-	if true then -- small
+	if false then -- small
 		w_h = 100
 		room_margin = 20  
   room_chance = 0.05 
@@ -261,8 +262,8 @@ function _init(auto)
 	pl.keys = {false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false}
 	pl.key_count = 0
 	if debug then
-		pl.keys = {true,true,true,true,true,true,true,true,true,true,true,true,true,false,false,true,}
-		pl.key_count = #pl.keys -2  -- 15 and 14 are already in the room
+		--pl.keys = {true,true,true,true,true,true,true,true,true,true,true,true,true,false,false,true,}
+		--pl.key_count = #pl.keys -2  -- 15 and 14 are already in the room
 		
 		if assert_durer then
 		 -- assert key_seq are unique
@@ -739,7 +740,7 @@ end
 function draw_room()
  pal(3,1)  -- blue water (spr 10)
  local wly = (water_level - wy) *8 
- if pl.lives > 0 then
+ if pl.lives > 0 and (wly >0 and wly<= 136) then
 	 if water_effect then
 		 for i=0,15 do
 			 local dif = wly - i*8
@@ -747,11 +748,11 @@ function draw_room()
 		  poke(0x5f70+i,mypoke)
 		 end
 		end
+	 -- water surface
+	 for x=0,127 do
+	  pset(x,flr(wly)+sin(x/8+time()*2)/2,1)
+	 end
 	end
- -- water surface
- for x=0,127 do
-  pset(x,flr(wly)+sin(x/8+time()*2)/2,1)
- end
  
 	if durer_sequence == -1 then
   if water_level < w_h then
@@ -762,6 +763,11 @@ function draw_room()
 	if pl.room == nil then
 		-- smooth upward scroll by extra top row with -ve offset
 	 map(0,0,0,-(1-(ceil(wy)-wy))*8,16,17)
+	 -- highlight durer key room?
+	 if (wly >0 and wly<= 136) then
+			rectfill(121,wly-3,126,wly+6,2)
+	  spr(30,120,wly-2,1,1,false,true)
+		end
 	else
 	 local rx=pl.room[1]
 	 local ry=pl.room[2]
