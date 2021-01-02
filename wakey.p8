@@ -1,19 +1,22 @@
 pico-8 cartridge // http://www.pico-8.com
 version 29
 __lua__
+-- wake of the ninja
+-- by ggaughan
+
+-- for #toyboxjam2
+
 -- init tab
 -----------
 debug = true
 assert_durer = debug
 
-version = 0.9
+version = 1.0
 
 water_effect = true
 if water_effect then
-	--underwater palette array - thanks @lazydevsacademy - good timing!
-	--local palarr={[0]=131,3,2,3,4,3,139,11,8,9,10,11,12,13,14,15}
+	--underwater palette array - thanks to @lazydevsacademy - good timing!
 	local palarr={[0]=131,3,2,3,4,5,139,11,8,9,10,11,12,13,14,15}
-	--local palarr={[0]=131,3,3,3,3,3,139,11,138,139,11,11,138,139,139,11}
 	--apply secondary display pal
 	pal(palarr,2)
 end
@@ -40,8 +43,6 @@ jump="jump"
 die="die"
 enemy_die="enemy_die"
 enemy_missile="enemy_missile"
--- note: animates from ceil(0.1..<#) 
--- todo pad all > 1 to 4?
 anim={
 	idle={128,129},
 	t={131},
@@ -64,7 +65,7 @@ anim={
 enemy_limit = 3
 enemy_die_duration = 15
 persist_mass = 2
-enemy_chance = 0.998
+enemy_chance = 0.997
 bubble_limit = 5
 bubble_chance = 0.95
 
@@ -171,10 +172,8 @@ enemy_kill=2
 key_points=200
 wake_max=16
 wake_colour={12,2,1,6,13}
--- todo remove wake_last_y = 0
 wake_decay = 16
 scroll_dy = 0.2  --note: 0.3 needs better collision resolution
---scroll_dy = 0.1
 
 default_energy = 1
 default_energy_use = default_energy/3
@@ -197,12 +196,11 @@ if debug then
   room_chance = 0.05 
 	 max_ledge_gap = 10 -- < max_energy = too easy
 	end
-	if true then -- fast finish
+	if false then -- fast finish
 	 key_seq_dur = 0.1
 	 --drain_rate = 1/2
 	end
 	--enemy_chance = 0.995
---w_g_y = 0
 end
 
 durer_sequence_length = (#key_seq+1) * key_seq_dur * 30
@@ -221,6 +219,7 @@ function _init(auto)
 		_draw = _draw_intro
 	end
 
+	-- world
 	w = {}	-- shaft world def (sparse)
 	actor = {} --all actors in world
 	enemy = {} --all active enemies (links to actor)
@@ -240,6 +239,7 @@ function _init(auto)
 	 
 	make_world(w_h)
 
+	--player 
 	points=0
  highest=wy
  lowest=wy
@@ -262,9 +262,6 @@ function _init(auto)
 	pl.keys = {false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false}
 	pl.key_count = 0
 	if debug then
-		pl.keys = {true,true,true,true,true,true,true,true,true,true,true,true,true,false,false,true,}
-		pl.key_count = #pl.keys -2  -- 15 and 14 are already in the room
-		
 		if assert_durer then
 		 -- assert key_seq are unique
 			local ksc = {}
@@ -288,9 +285,9 @@ function _init(auto)
 			--assert(#ksc==#key_seq)
 		end
 	end
+	
 	-- collected and placed in durer room - we have 14 key rooms and place 2 already (15 + 14)
 	durer_keys = {false,false,false,false,false,false,false,false,false,false,false,false,false,true,true,false}
-
  durer_sequence = nil
  draining_sequence = nil
 
@@ -312,14 +309,12 @@ function control_player(pl)
 
 	-- note: +1 for smooth top row upward scrolling
 	local in_water = pl.y + wy + pl.dy - w_g_y +1 > water_level 
-	--printh("*"..(pl.y + wy + pl.dy - w_g_y) .."..".. water_level )
 
 	if pl.state == die then
 	 -- note: dying - no control and no recovery
 		if pl.t > die_duration then
 		 -- reset for next time
 		 -- todo move to new_life
-		 -- todo play sound
 		 -- todo maybe location reset? or is fall enough?
 			pl.state = idle
 		end
@@ -327,7 +322,6 @@ function control_player(pl)
 		-- we are alive and have control
 		pl.state = idle	
 
-	 -- how fast to accelerate
 	 local accel = 0.20
 	 if btn(⬅️) then
 	 	pl.dx -= accel/2 
@@ -352,7 +346,6 @@ function control_player(pl)
 		 	pl.dir = t
 		 	pl.energy -= default_energy_use
 		 end --else --'fall'
-	 	--printh("!"..pl.energy)
 	 end
 	 if btn(⬇️) then
 		 if pl.energy > min_energy then
@@ -374,7 +367,6 @@ function control_player(pl)
 	 	pl.energy += default_energy_recharge
 		end
 		if not btn(⬆️) and not in_water then
-			--printh("!*"..pl.energy)
 	 	pl.energy += default_energy_recharge
 		end
 		if pl.energy > max_energy then
@@ -390,43 +382,32 @@ function control_player(pl)
 				else
 					wake[wake_last] = {pl.x,pl.y-1.5,pl.t}
 				end
-				--if btnp(❎) then
 				if wake_start == 0 then
 					wake_start=wake_last
 				end
 				-- todo use extra energy?
-				--printh("w "..wake_start.." "..wake_last.." "..wake[wake_last][1]..","..wake[wake_last][2])
 			end
 		else
-				--if wake_start != 0 then
 				if wake_last != 0 then
-					--wake_start=0
 					wake_last += 1
 					if (wake_last > wake_max) wake_last = 1
 			  wake[wake_last] = {-1,-1,-1}
 			  wake_last = 0
-				 --printh("wend ")
 			 end
 		end
-		--todo remove wake_last_y = pl.y+wy
-	
  end
- 
-	-- todo move to _draw?
+
+	-- camera shift? 
+	-- todo move to _draw? and/or move_camera(wdy)
 	if pl.room == nil then
 		wdy = 0
 	 if pl.y < 7 then
-		 if true then --not solid_pl then
-			 wdy-=scroll_dy
-			end
+		 wdy-=scroll_dy
 		 pl.y=7
 	 elseif pl.y > 9 then
-		 if true then --not solid_pl then
-			 wdy+=scroll_dy
-			end
+		 wdy+=scroll_dy
 		 pl.y=9
 	 end
-	 -- todo move_camera(wdy)
 	 wy += wdy
 	 -- shift everything else to suit
 	 for a in all(actor) do
@@ -435,39 +416,22 @@ function control_player(pl)
 	 for a in all(wake) do
 	 	a[2] -= wdy
 	 end
-	 -- todo end move_camera
 	-- else in a fixed room
 	end
 	
- -- play a sound if moving
- -- (every 4 ticks)
- 
- --if (abs(pl.dx)+abs(pl.dy) > 0.1
- --    and (pl.t%4) == 0) then
- -- sfx(1)
- --end
-
-	--printh(pl.y + wy + pl.dy - w_g_y .. " .. ".. water_level)	
 	if in_water and pl.y + wy > water_level then
-		--printh("swimming")
-	 -- todo idle float anim?
 		if pl.state == l then
 			pl.state = l_swim
 		elseif pl.state == r then
 			pl.state = r_swim
+	 -- todo else idle float anim?
 		end
 	end
 
-	-- todo revisit 
 	local solid_pl
-	--printh("so far "..pl.state)
 	if in_water and pl.y + wy -1 > water_level then
-		--printh("falling in water check")
-		--printh(pl.dy)
 		if pl.dy < -0.1 then
-			--printh(" falling up "..pl.dy)
 			if pl.state != t and pl.state != jump then
-				--solid_pl = solid_a(pl, 0, pl.dy+wdy-w_g_y) 
 				solid_pl = solid_a(pl, 0, pl.dy-w_g_y) 
 				if not solid_pl and pl.state != die then
 				 pl.state = falling
@@ -475,11 +439,8 @@ function control_player(pl)
 			end
 		end
 	elseif pl.y + wy + 1 < water_level then
-		--printh("falling in air check")
 		if pl.dy > 0.1 then
-			--printh(" falling down "..pl.dy)
 			if pl.state != b and pl.state != jump then
-				--solid_pl = solid_a(pl, 0, pl.dy+wdy+w_g_y) 
 				solid_pl = solid_a(pl, 0, pl.dy+w_g_y) 
 				if not solid_pl and pl.state != die then
 				 pl.state = falling
@@ -487,9 +448,8 @@ function control_player(pl)
 			end
 		end
 	end
-	-- todo fall up (float) if -ve gravity
 
-	-- points? 
+	-- distance points? 
 	if pl.y+wy < highest - level_size then
 	 points+=level_points
 	 if (sound) sfx(s_highlow)
@@ -511,9 +471,9 @@ function control_player(pl)
 end
 
 function update_enemies()
-	for e in all(enemy) do
-	  -- note: mostly done by move_actor
-	end
+	--for e in all(enemy) do
+	--  -- note: mostly done by move_actor
+	--end
 end
 
 function update_map()
@@ -543,8 +503,6 @@ function update_map()
 					mset(x,y,dr[x+1])
 				end
 			end
-		 --if (debug and w[y_w] and w[y_w][-1]) mset(7,y,119)  
-		 --if (debug and w[y_w] and w[y_w][16]) mset(8,y,121)	 
 		end
 	else
 	 -- if end-game, drain the room
@@ -553,7 +511,6 @@ function update_map()
 		 local ry=pl.room[2]
 			for iw=0,14 do
 				if wy+16-iw < water_level then
-				 --printh("d:"..wy+ry-iw.." "..water_level)
 					for ix=0,15 do  -- note: includes doorway (l or r)
 					 if mget(rx+ix,ry+15-iw) == w_water_brick then
 							mset(rx+ix,ry+15-iw,0)
@@ -629,49 +586,29 @@ end
 function draw_actor(a)
  local sx = (a.x * 8) - 4
  local sy = (a.y * 8) - 4
- -- spr(a.spr + a.frame, sx, sy)
  
  local fy
  local fx=a.dir==l or (a.dx < 0 and a.dir != r)
- --todo remove:
-	--if a.y + wy > water_level then
-	--	-- invert based on gravity 
-	-- fy=a.dir==b
-	--else
  if a.y + wy > water_level+1 then  -- +1 to stay upright on surface
   fy = (a.dir != t)
  else
 		fy=a.dir==b 
 	end
-	--if (fy) printh("flipy")
-	--if (a==pl) printh("*"..a.state)
  if a.state then
 	 spr(anim[a.state][ceil(a.frame)],sx,sy,1,1, fx,fy)
-	else
+	else -- not expected here
 		-- todo default per actor
 	 spr(122 and debug or 0,sx,sy,1,1, fx,fy)
 	end
-	
--- if debug then
--- 	rect(sx+a.dx,sy+0,
---    sx+a.dx + a.w*16,
---    sy+0 + a.h*16, 12) 
---    
--- 	rect(sx+0,sy + a.dy, --+ w_g_y,
---    sx+0 + a.w*16,
---    sy+a.dy + w_g_y + a.h*16,10)    
---	end	
 end
 
 function draw_wake()
-	--todo remove local in_water = pl.y + wy + pl.dy - w_g_y +1 > water_level 
 	for i=1,wake_max do
 		local wki = wake_start + i
 		if (wki > wake_max) wki = wki-wake_max
 		local wk = wake[wki]
 		if (wk[1] == -1) break
 		local age=pl.t-wk[3]
-		--printh("wd".." "..wake_start.." "..i..":"..wki..":"..wk[1]..","..wk[2].."-"..wk[3])
 		if age < wake_decay then
 			local oy = (wk[2] * 8) + 4 
 			local ow = (age/4)*2 * 4
@@ -686,18 +623,14 @@ function draw_wake()
 			else
 		  fillp(0b1010010110100101.1)
 			end
-	  --printh("  "..ox-ow..","..oy-oh..","..ox+ow..","..oy+oh)
 	  local c = pl.t - wk[3] 
 	  c = wake_colour[c%#wake_colour+1]
 	  ovalfill(ox-ow,oy-oh,ox+ow,oy+oh, c)
-	  --if (debug) rect(ox-ow,oy-oh,ox+ow,oy+oh, 11)
 	  -- check if any enemies are killed by this
 			for e in all(enemy) do
 			 if e.state != enemy_die then
 		   local x=ox - ((e.x)*8)
 		   local y=oy - ((e.y)*8)
-			  --if (debug) rect(e.x*8-(e.w*8),e.y*8-(e.h*8),e.x*8+4,e.y*8+4, 14)
-			  --if (debug) rect(ox,oy,ox+ow,oy+oh, 10)
 		   if ((abs(x) < (ow+e.w*8)) and
 		      (abs(y) < (oh+e.h*8)))
 		   then 
@@ -803,7 +736,6 @@ function draw_room()
 				local t = pl.t - durer_sequence
 
 				local si = t\key_seq_each +1
-				--printh(si.." "..t..":"..durer_sequence_length.." "..t%key_seq_each)
 				local seq = key_seq[si]
 
 				local ss = si*key_seq_each - t  -- countdown
@@ -818,7 +750,6 @@ function draw_room()
  				end
 				end
 				
-				--printh(ss.." "..key_seq_each.." = "..ss / key_seq_each)
 				if seq != nil then
 				 if #seq == 4 then
 	 				if ss / key_seq_each < 0.4 then
@@ -877,8 +808,6 @@ end
 function _draw_intro()
 	cls()
 
- --print("can you reach the extremes?", 6, 6, 10)
-
  map(0,0,0,0,16,16)
 
  print("⬅️➡️⬆️⬇️ to move", 28, 80, 9)
@@ -905,7 +834,6 @@ function draw_credits()
 	print("credits", 50,34,5)
 	-- todo underline
 	
-	-- todo scroll?
 	print("written by", 18,44,13)
 	print("greg gaughan", 63,44,1)
 
@@ -929,10 +857,8 @@ function _draw_success()
 		poke(0x5f5f,0)  -- off
 	end
 	
- --pal(12,140,1)
  rectfill(0,0, 128, 50, 12)  --sky
  sspr((72%16)*8,(72\16)*8, 8,8, 102,24, 8*3,8*3) -- sun
- --pal(11,139,1)
  rectfill(0,51, 128, 128, 11)  --grass
  sspr((32%16)*8,(32\16)*8, 8,8, 20,68, 8*3,8*3) -- tree
  sspr((32%16)*8,(32\16)*8, 8,8, 94,46, 8*1,8*1) -- tree
@@ -995,36 +921,13 @@ function _draw_game()
  draw_wake()
 
 	draw_status()
-
-	if debug then 
-	 -- no use?:
-	 --local _test_y = solid_a(pl, 0, pl.dy) 
-	
-	 --print("x "..pl.x,0,120,7)
-	 --print("y "..pl.y,48,120,7)
-	 --print("wy "..wy,90,120,7)
-
-		----print("c "..ceil(wy)-wy, 10,1,7)
-	 
-	 --print("t "..pl.t,0,9,7)  -- in k
-	 ----print("e "..pl.energy,90,8,7)  -- in k
-
-	 --local wly = (water_level - wy) *8 
-	 --line(0, wly, 127, wly, 11)  
-	 
-	 --printh("pl.y+wy:"..((pl.y+wy)*8).." wl:"..water_level*8)
-	 --printh(" "..pl.dy)
- end
 end
-
-
 
 -->8
 -- world building
 
 -- wall and actor collisions
--- by zep
-
+-- based on code by zep
 -- make an actor
 -- and add to global collection
 -- x,y means center of the actor
@@ -1048,9 +951,7 @@ function make_actor(x, y)
  --a.frames=2
  
  -- half-width and half-height
- -- slightly less than 0.5 so
- -- that will fit through 1-wide
- -- holes.
+ -- slightly less than 0.5 so that will fit through 1-wide holes.
  a.w = 0.4
  a.h = 0.4
  
@@ -1060,14 +961,9 @@ function make_actor(x, y)
 end
 
 -- for any given point on the
--- map, true if there is wall
--- there.
-
+-- map, true if there is wall there.
 function solid(x, y, is_player)
-
  -- grab the cell value
- --val=mget(x, y)
- --camera(0, 8-(ceil(wy)-wy)*10)
  if pl.room == nil then
 	 val=mget(x, y)
 
@@ -1103,13 +999,11 @@ function solid(x, y, is_player)
 			-- note: we don't detect digits - make them get the key
 			
 			if key != nil then
-				--printh("k="..key)
 				assert(not(durer_keys[key] or pl.keys[key]))
 				-- hide: pick up
 				pl.keys[key] = true
 				pl.key_count += 1
 				if (sound) sfx(s_key_pickup)
-				--printh(wy.." "..y.." "..water_level)
 		  local replace = ceil(wy) + y > water_level and w_water_brick or 0		
 				mset(rx+x,ry+y-1, replace)
 				mset(rx+x+1,ry+y-1, replace)
@@ -1118,23 +1012,15 @@ function solid(x, y, is_player)
 			end
 		end 
 	end
- --camera()
-	--printh(x..","..y) 
- -- check if flag 0 is set (the
- -- red toggle button in the 
- -- sprite editor)
+ -- check if flag 0 is set 
  return fget(val, 0)
 end
 
 -- solid_area
--- check if a rectangle overlaps
--- with any walls
-
+-- check if a rectangle overlaps with any walls
 --(this version only works for
 --actors less than one tile big)
-
 function solid_area(x,y,w,h, is_player)
-
 	if pl.room == nil then
 		-- note: +1 for map shift for smooth top row upward scroll
 		y = y + 1 - (ceil(wy)-wy)  
@@ -1142,11 +1028,6 @@ function solid_area(x,y,w,h, is_player)
 		y = y + 1
 	end
  
- if debug then
-		--rect(x*8-w*16, y*8-h*16, x*6+w*16, y*8+h*16, 9)
-		--printh((x*8-w*16)..","..(y*8-h*16)..","..(x*6+w*16)..","..(y*8+h*16))
-	end
-	
  return 
   solid(x-w,y-h, is_player) or
   solid(x+w,y-h, is_player) or
@@ -1154,9 +1035,7 @@ function solid_area(x,y,w,h, is_player)
   solid(x+w,y+h, is_player)
 end
 
-
--- true if a will hit another
--- actor after moving dx,dy
+-- true if a will hit another actor after moving dx,dy
 function solid_actor(a, dx, dy)
  for a2 in all(actor) do
   if a2 != a then
@@ -1164,18 +1043,14 @@ function solid_actor(a, dx, dy)
   	if a.is_bubble or a2.is_bubble then 
   		-- continue
   	else
-	  	-- todo or, just don't call if mass==0 and pl must test enemy hits
-	  	--        so then if a=pl and a2=enemy = simple?
 	   local x=(a.x+dx) - a2.x
 	   local y=(a.y+dy) - a2.y
 	   if ((abs(x) < (a.w+a2.w)) and
 	      (abs(y) < (a.h+a2.h)))
-	   then 
-	    
+	   then     
 	    -- moving together?
 	    -- this allows actors to
-	    -- overlap initially 
-	    -- without sticking together    
+	    -- overlap initially without sticking together    
 	    if (dx != 0 and abs(x) <
 	        abs(a.x-a2.x)) then
 	     v=a.dx + a2.dy
@@ -1220,10 +1095,7 @@ function solid_actor(a, dx, dy)
 		     kill_enemy(a)  -- don't kill persist
 		    end
 	     return true 
-	    end
-	    
-	    --return true
-	    
+	    end    
 	   end
 	  end
 	 end
@@ -1244,18 +1116,14 @@ function solid_a(a, dx, dy)
 end
 
 function move_actor(a)
-
  -- only move actor along x
- -- if the resulting position
- -- will not overlap with a wall
+ -- if the resulting position will not overlap with a wall
  if not solid_a(a, a.dx, 0) 
  then
   a.x += a.dx
  else   
-  --printh(a.dx.." "..a.y)
   -- otherwise bounce
   a.dx *= -a.bounce 
-  --sfx(s_enemy_kill)
  end
 
  -- ditto for y
@@ -1265,38 +1133,23 @@ function move_actor(a)
 	 if not a.is_enemy then  -- specifically a.mass==persist_mass
 		 if a.y + wy - 1 +1 > water_level then  -- note: +1 for extra row for smooth upward scrolling
 		 	a.dy -= w_g_y * a.mass
-		 	--if (a==pl) printh("g>"..a.dy)
 		 else
 		 	a.dy += w_g_y * a.mass
-		 	--if (a==pl) printh("g"..a.dy)
 		 end	 
 		 -- else no gravity for enemies - yet
 		end
-  --printh(a.dy.."!")
  else
   a.dy *= -a.bounce 
-  --printh(a.dy.."!")
-  --sfx(s_enemy_kill)
  end
 
- -- apply inertia
- -- set dx,dy to zero if you
- -- don't want inertia
- 
+ -- apply inertia: set dx,dy to zero if you don't want inertia
  a.dx *= a.inertia
  a.dy *= a.inertia
  
- --printh(a.dy.." "..a.y)
- 
- -- advance one frame every
- -- time actor moves 1/4 of
- -- a tile
-
+ -- advance one frame every time actor moves 1/4 of a tile
 	if a.state then
 	 a.frame += abs(a.dx) * 1
  	a.frame += abs(a.dy) * 1
-	 -- a.frame %= a.frames -- always 2 frames
-
 		if a.frame >= #anim[a.state] then
 			a.frame = 0.01
 		end
@@ -1358,7 +1211,6 @@ function player_move_room()
 				x = 0.5
 			end
 			if pl.room != nil then
-				--printh("> pl.y "..pl.y.." scroll_y "..scroll_y.." pl.dy "..pl.dy.." wy "..wy)
 			 local rx=pl.room[1]
 			 local ry=pl.room[2]
 				pl.y += scroll_y
@@ -1391,7 +1243,6 @@ function player_move_room()
 				 	for yy=0,15 do
 				 	 if mget(rx+xx,ry+yy) == 97 then --enemy
 				 	  if xx>0.5 and yy > 0.5 and xx < 15 and yy < 15 then
-					 	 	--printh(wy.." "..yy.." "..water_level)
 			  				local replace = ceil(wy) + yy + 0.5 > water_level and w_water_brick or 0
 					 			mset(rx+xx,ry+yy, replace) 
 									local e = make_enemy(xx+0.5, yy+0.5)
@@ -1400,21 +1251,16 @@ function player_move_room()
 									e.bounce = 1
 									e.inertia = 1
 									add(enemy, e)
-									--if (debug)	printh("add "..e.x.." "..e.y.." "..e.mass)			 			
 								-- else leave borders intact (rounding)
 								end
 				 		elseif mget(rx+xx,ry+yy) == 30 then --key
 				 			-- note: +2 digits to right
 				 			local key = get_key_from_map(rx+xx+1,ry+yy)
 				 			if key != nil then
-				 				--printh("k="..key)
 				  			if durer_keys[key] or pl.keys[key] then
 										local y_w = ceil(wy)  -- todo remove!
 				  				-- hide: already picked up
-				  				--local replace = y_w - yy > water_level and w_water_brick or 0
-				  				--local replace = y_w + yy > water_level and w_water_brick or 0
 				  				local replace = ceil(wy) + yy > water_level and w_water_brick or 0
-				  				--printh(replace.." "..y_w.."+"..yy.." "..water_level+1)
 						 			mset(rx+xx,ry+yy, replace)
 						 			mset(rx+xx+1,ry+yy, replace)
 					  			mset(rx+xx+2,ry+yy, replace)
@@ -1440,10 +1286,7 @@ function player_move_room()
 				x = 0.5
 			end
 			if pl.room == nil then
-				--printh(wy.." "..water_level)
-				--pl.y -= pl.room_old_y  
 				pl.y = 14.6 - pl.room_old_y  -- restore absolute y rather than relative to current y - less glitchy under water
-				--printh("< pl.y "..pl.y.." pl.room_old_y "..pl.room_old_y.." pl.dy "..pl.dy.." wy "..wy)
 				wy += pl.room_old_y
 				pl.x = x
 			else
@@ -1477,7 +1320,6 @@ function link_room(room, y, d)
 			end
 		end
 	end
-	--printh("add "..d.." room "..(y-1).." "..w[y-1][door_pos+d_offset][1]..","..w[y-1][door_pos+d_offset][2])
 end
 
 function make_world_row(y)
@@ -1505,7 +1347,6 @@ function make_world_row(y)
 					end
 					if #rooms > 0 and y-last_ledge > 1 then
 		  		if (rnd() > room_chance and y > room_range_start and y < room_range_end and y != durer_room_y+1) or need_room then
-		  			printh(#rooms.." add room at "..y.." "..y-last_ledge.." "..water_level)
 							local room = rooms[#rooms]
 							rooms[#rooms]=nil
 							if y > durer_room_y then
@@ -1525,9 +1366,8 @@ end
 
 function make_world(h)
 	w={}
-	
 	-- extra rooms hardcoded in map from x=16 (2 16x16 room levels deep)
-	-- note: door/water will be placed dynamically depening on depth and left/right linkage
+	-- note: door/water will be placed dynamically depending on depth and left/right linkage
 	-- room: x-map-offset-top-left, y-map-offset-top-left
 	--					  any keys are expected to have key number to right (2 digits)
 	-- note: 14 key rooms
@@ -1551,8 +1391,6 @@ function make_world(h)
 		{112,16},
 		
 	 {0,16}, -- end: will be placed near start
-
-		--{32,0},  --temp debug
 	}
 
 	w[0] = {}
@@ -1583,15 +1421,12 @@ function make_world(h)
 	end
 
 	if #rooms > 0 then
-		if (debug) printh("*** rooms not added automatically: "..#rooms)
-	
 		-- place any leftover rooms - we need them all
 		while #rooms > 0 do
 			local y = flr(rnd(h-1))+1
 		 if y > water_level+1 or y < water_level-4 then
 		  -- todo could relax room range here?
 		  if w[y] == nil and w[y+1] == nil and y > room_range_start and y < room_range_end then
-					--printh(" - suitable gap "..y)
 					-- todo check above/below free too?
 		   w[y] = {}
 					local room = rooms[#rooms]
@@ -1637,7 +1472,7 @@ function spawn_enemies()
 			local in_water = pl.y + wy + pl.dy - w_g_y +1 > water_level 
 	 
 			if rnd() > enemy_chance then
-			 x = flr(rnd(13)) + 1.5  -- i.e. in lanes (so player can hide at edges)
+			 x = flr(rnd(13)) + 1.5  -- i.e. in lanes (so player can be sure to be missed if not in lane - e.g. at edges)
 				e = make_enemy(x, -1)
 				e.state = enemy_missile
 			 if in_water then
@@ -1649,7 +1484,6 @@ function spawn_enemies()
 					e.dy -= accel 
 				end
 				add(enemy, e)
-				--if (debug)	printh("add "..e.dy.." "..e.x.." "..e.mass)
 			end
 		end
 	-- else no enemies in rooms (for now)
@@ -1658,10 +1492,7 @@ end
 
 function purge_enemies()
 	for e in all(enemy) do
-		-- todo add slack / keep some
-		--      and/or add timer deaths
 		if e.y < 0 or e.y > 15 or e.x < 0 or e.x > 15 or (e.state==enemy_die and e.t > enemy_die_duration) then
-		 --if (debug) printh("purge "..e.y)
 		 del(actor, e)
 			del(enemy, e)
 		end
@@ -1675,7 +1506,6 @@ function clear_enemies()
  				if pl.room != nil then
 					 local rx=pl.room[1]
 					 local ry=pl.room[2]
-					 --printh("(re)set "..e.x..","..e.y)
 			 	 mset(flr(rx+e.x-0.5),flr(ry+e.y-0.5), 97)
  				end
     end
@@ -1685,7 +1515,6 @@ function clear_enemies()
 end
 
 function kill_enemy(a)
- --printh("k:"..e.y)
  if (points < points_limit) points+=enemy_kill
  if (sound) sfx(s_enemy_kill)
 	a.state=enemy_die
@@ -1735,7 +1564,6 @@ function spawn_bubbles()
 					e.dy -= accel 
 					e.dir=t
 					add(bubble, e)
-					--if (debug)	printh("add "..e.dy.." "..e.x.." "..e.mass)
 				end
 			end
 		end
@@ -1747,7 +1575,6 @@ function purge_bubbles()
  local wly = (water_level - wy) *8 
 	for e in all(bubble) do
 		if e.y*8 <= wly+4 or e.y > 16 or e.x < 0 or e.x > 15 then
-		 --if (debug) printh("purge "..e.y)
 		 del(actor, e)
 			del(bubble, e)
 		end
@@ -1786,21 +1613,21 @@ function scroll_tile(_tile)
  poke4(spritestart+(startrow*sheetwidth*8)+startcol*spritewide,temp) 
 end 
 
--------------------------------
--- string width with glyphs
-function strwidth(str)
- local px=0
- for i=1,#str do
-  px+=(ord(str,i)<128 and 4 or 8)
- end
- --remove px after last char
- return px-1
-end
--------------------------------
--- get centered on screen width
-function center_x(str)
- return 64 - strwidth(str)/2
-end
+---------------------------------
+---- string width with glyphs
+--function strwidth(str)
+-- local px=0
+-- for i=1,#str do
+--  px+=(ord(str,i)<128 and 4 or 8)
+-- end
+-- --remove px after last char
+-- return px-1
+--end
+---------------------------------
+---- get centered on screen width
+--function center_x(str)
+-- return 64 - strwidth(str)/2
+--end
 
 function draw_rwin(_x,_y,_w,_h,_c1,_c2)
  -- would check screen bounds but may want to scroll window on?
@@ -1860,11 +1687,11 @@ function clear_wake()
 	end
 end
 
-function wait(a) 
-	for i = 1,a do
-		flip() 
- end
-end
+--function wait(a) 
+--	for i = 1,a do
+--		flip() 
+-- end
+--end
 
 __gfx__
 00012000606660666066606660666066606660666066606616666661feeeeee87bbbbbb30000004000000030000300000b0dd030777777674f9f4fff7999a999
@@ -1996,134 +1823,134 @@ d1dd66660ddddcd0666ddddd0dddcdc0066dddcd101d5682011111111111111006ddddd071100115
 55005555555005005500550055000005555500555550000555550055550555505500550055550055550000005500000555555500550000055555555555000000
 66666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666
 __label__
-77767776000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000777677767776777677767776
-77757665770077707770000000000007700770077077707770000077700000000000000000000000000000000077700055555555555555555555555576657665
-77657665070070707070000000000070007000707070707000000070700000000000000000000000000000000070000099999999999999999999999576657665
-67556555070070707770000000000077707000707077007700000070700000000000000000000000000000000077000099999999999999999999999565556555
-77777677070070707070000000000000707000707070707000000070700000000000000000000000000000000070000055555555555555555555555776777677
-67766576777077707770000000000077000770770070707770000077700000000000000000000000000000000077700000000000657665766576657665766576
-65766576000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000657665766576657665766576
-55655565000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000556555655565556555655565
-77767776000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000077767776
-76657665000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000076657665
-76657665000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000076657665
-65556555000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000065556555
-76777677000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000076777677
-65766576000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000065766576
-65766576000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000065766576
-55655565000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055655565
-77767776000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000077767776
-76657665000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000076657665
-76657665000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000076657665
-65556555000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000065556555
-76777677000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000076777677
-65766576000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000065766576
-65766576000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000065766576
-55655565000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055655565
-77767776000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000077767776
-76657665000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000076657665
-76657665000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000076657665
-65556555000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000065556555
-76777677000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000076777677
-65766576000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000065766576
-65766576000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000065766576
-55655565000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055655565
-77767776000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000077767776
-76657665000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000076657665
-76657665000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000076657665
-65556555000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000065556555
-76777677000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000076777677
-65766576000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000065766576
-65766576000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000065766576
-55655565000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055655565
-77767776000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000077767776
-76657665000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000076657665
-76657665000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000076657665
-65556555000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000065556555
-76777677000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000076777677
-65766576000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000065766576
-65766576000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000065766576
-55655565000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055655565
-77767776000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000077767776
-76657665000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000076657665
-76657665000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000076657665
-65556555000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000065556555
-76777677000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000076777677
-65766576000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000065766576
-65766576000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000065766576
-55655565000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055655565
-77767776000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000077767776
-76657665000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000076657665
-76657665000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000076657665
-65556555000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000065556555
-76777677000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000076777677
-65766576000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000065766576
-65766576000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000065766576
-55655565000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055655565
-77767776000000000000000000000002821000000000000000000000000000000000000000000000000000000000000000000000000000000000000077767776
-76657665000000000000000000002211111100000000000000000000000000000000000000000000000000000000000000000000000000000000000076657665
-766576650000000000000000000001ddcdcd00000000000000000000000000000000000000000000000000000000000000000000000000000000000076657665
-6555655500000000000000000000106ddddd00000000000000000000000000000000000000000000000000000000000000000000000000000000000065556555
-7677767700000000000000000000006d5ddd00000000000000000000000000000000000000000000000000000000000000000000000000000000000076777677
-65766576000000000000000000000065111d00000000000000000000000000000000000000000000000000000000000000000000000000000000000065766576
-65766576000000000000000000000052001000000000000000000000000000000000000000000000000000000000000000000000000000000000000065766576
-55655565000000000000000000000502001000000000000000000000000000000000000000000000000000000000000000000000000000000000000055655565
-55555555555555555555555555555555555555555555555555555555000000000000000000000000000000000000000000000000000000000000000077767776
-66666666666666666666666666666666666666666666666666666666000000000000000000000000000000000000000000000000000000000000000076657665
-67676767676767676767676767676767676767676767676767676767000000000000000000000000000000000000000000000000000000000000000076657665
-77777777777777777777777777777777777777777777777777777777000000000000000000000000000000000000000000000000000000000000000065556555
-76767676767676767676767676767676767676767676767676767676000000000000000000000000000000000000000000000000000000000000000076777677
-66666666666666666666666666666666666666666666666666666666000000000000000000000000000000000000000000000000000000000000000065766576
-66666666666666666666666666666666666666666666666666666666000000000000000000000000000000000000000000000000000000000000000065766576
-55555555555555555555555555555555555555555555555555555555000000000000000000000000000000000000000000000000000000000000000055655565
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-76657665010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000076657665
-76657665000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010076657665
-65556555000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000065556555
-76777677100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000076777677
-65766576000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000165766576
-65766576010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000065766576
-55655565000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100055655565
-77767776000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001077767776
-76657665010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000076657665
-76657665000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010076657665
-65556555000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000065556555
-76777677100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000076777677
-65766576000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000165766576
-65766576010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000065766576
-55655565000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100055655565
-77767776000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001077767776
-76657665010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000076657665
-76657665000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010076657665
-65556555000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000065556555
-76777677100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000076777677
-65766576000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000165766576
-65766576010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000065766576
-55655565000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100055655565
-77767776000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001077767776
-76657665010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000076657665
-76657665000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010076657665
-65556555000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000065556555
-76777677100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000076777677
-65766576000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000165766576
-65766576010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000065766576
-55655565000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100055655565
-77767776000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001077767776
-76657665010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000076657665
-76657665000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010076657665
-65556555000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000065556555
-76777677100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000076777677
-65766576000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000165766576
-65766576010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000065766576
-55655565000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100055655565
-77767776707000100000001000000010000000100000001070700010777000107770707070007770000000100070707070000077707770777000001077767776
-76757665717000000100000001000000010000000100000071700000717000007100707071000070010000000170707071000070017070707100000076657665
-77657665777001000000010000000100000001000000010077700100777001007770777077700170000001000070717770000177707071707000010076657665
-75756555007100000001000000010000000100000001000000710000707100000071007070710070000100000077700070010000707170707001000065556555
-76777677107000001000000010000000100000001000000077700000777007007770007077700070100000001077707770000077707770777000000076777677
-65766576000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000165766576
-65766576010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000065766576
-55655565000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100055655565
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000006822d0000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000026cdcd0000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000216dddd0000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000016dddd0000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000015ddd00000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000005211100000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000005200100000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000050200100000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000000000000000000000000000
+00000000777777767777777677777776777777767777777677777776000000037777777677777776777777767777777677777776777777760000000000000000
+00000000766666657666666576666665766666657666666576666665030000007666666576666665766666657666666576666665766666650000000000000000
+00000000766666657666666576666665766666657666666576666665000030007666666576666665766666657666666576666665766666650000000000000000
+00000000766666657666666576666665766666657666666576666665000000307666666576666665766666657666666576666665766666650000000000000000
+00000000766666657666666576666665766666657666666576666665030000007666666576666665766666657666666576666665766666650000000000000000
+00000000766666657666666576666665766666657666666576666665000003007666666576666665766666657666666576666665766666650000000000000000
+00000000766666657666666576666665766666657666666576666665000300007666666576666665766666657666666576666665766666650000000000000000
+00000000655555556555555565555555655555556555555565555555300000006555555565555555655555556555555565555555655555550000000000000000
+00000000777777766666666666666666666666666666666666666666666666666666666666666666666666666666666666666666777777760000000000000000
+00000000766666655775577555777755577557755577777555555555557777555577777555555555577777755775577555777775766666650000000000000000
+00000000766666655777777057700775577077005770000055555555577007755770000055555555555770005770577057700000766666650000000000000000
+00000000766666655777777057777770577770055777775555555555577057705777775555555555555770555777777057777755766666650000000000000000
+00000000766666655770077057700770577077555770000555555555577057705770000555555555555770555770077057700005766666650000000000000000
+00000000766666655700557057705770577057755577777555555555557777005770555555555555555770555770577055777775766666650000000000000000
+00000000766666655505555055005500550055005550000055555555555000055500555555555555555500555500550055500000766666650000000000000000
+00000000655555556666666666666666666666666666666666666666666666666666666666666666666666666666666666666666655555550000000000000000
+00000000777777767777777677777776777777766666666666666666666666666666666666666666777777767777777677777776777777760000000000000000
+00000000766666657666666576666665766666655775577555777755577557755555777555777755766666657666666576666665766666650000000000000000
+00000000766666657666666576666665766666655777577055577005577757705555577057700775766666657666666576666665766666650000000000000000
+00000000766666657666666576666665766666655777777055577055577777705555577057777770766666657666666576666665766666650000000000000000
+00000000766666657666666576666665766666655770777055577055577077705775577057700770766666657666666576666665766666650000000000000000
+00000000766666657666666576666665766666655770577055777755577057705577770057705770766666657666666576666665766666650000000000000000
+00000000766666657666666576666665766666655500550055500005550055005550000555005500766666657666666576666665766666650000000000000000
+00000000655555556555555565555555655555556666666666666666666666666666666666666666655555556555555565555555655555550000000000000000
+00000000777777767777777677777776777777767777777677777776777777767777777677777776777777767777777677777776777777760000000000000000
+00000000766666657666666576666665766666657666666576666665766666657666666576666665766666657666666576666665766666650000000000000000
+00000000766666657666666576666665766666657666666576666665766666657666666576666665766666657666666576666665766666650000000000000000
+00000000766666657666666576666665766666657666666576666665766666657666666576666665766666657666666576666665766666650000000000000000
+00000000766666657666666576666665766666657666666576666665766666657666666576666665766666657666666576666665766666650000000000000000
+00000000766666657666666576666665766666657666666576666665766666657666666576666665766666657666666576666665766666650000000000000000
+00000000766666657666666576666665766666657666666576666665766666657666666576666665766666657666666576666665766666650000000000000000
+00000000655555556555555565555555655555556555555565555555655555556555555565555555655555556555555565555555655555550000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000999990009999900099999000999990000009990099000009990099090909990000000000000000000000000000000000000
+00000000000000000000000000009990099099009990999099909900099000000900909000009990909090909000000000000000000000000000000000000000
+00000000000000000000000000009900099099000990990009909900099000000900909000009090909090909900000000000000000000000000000000000000
+00000000000000000000000000009990099099009990990009909990999000000900909000009090909099909000000000000000000000000000000000000000
+00000000000000000000000000000999990009999900099999000999990000000900990000009090990009009990000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000009999900000099900990999000009090999090909990000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000099090990000090009090909000009090909090909000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000099909990000099009090990000009090999099009900000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000099090990000090009090909000009990909090909000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000009999900000090009900909000009990909090909990000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000ddd0ddd0ddd00dd00dd000000ddddd000000ddd00dd0ddd000000dd0ddd0ddd0dd00ddd0ddd00dd000000000000000000000000000
+0000000000000000000000d0d0d0d0d000d000d0000000dd000dd00000d000d0d0d0d00000d000d0d0d000d0d00d000d00d00000000000000000000000000000
+0000000000000000000000ddd0dd00dd00ddd0ddd00000dd0d0dd00000dd00d0d0dd000000d000dd00dd00d0d00d000d00ddd000000000000000000000000000
+0000000000000000000000d000d0d0d00000d000d00000dd000dd00000d000d0d0d0d00000d000d0d0d000d0d00d000d0000d000000000000000000000000000
+0000000000000000000000d000d0d0ddd0dd00dd0000000ddddd000000d000dd00d0d000000dd0d0d0ddd0ddd0ddd00d00dd0000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000ccc0ccc0ccc00cc00cc000000ccccc000000ccc00cc000000cc0ccc0ccc0ccc0ccc000000000000000000000000000000000
+0000000000000000000000000000c0c0c0c0c000c000c0000000cc0c0cc000000c00c0c00000c0000c00c0c0c0c00c0000000000000000000000000000000000
+0000000000000000000000000000ccc0cc00cc00ccc0ccc00000ccc0ccc000000c00c0c00000ccc00c00ccc0cc000c0000000000000000000000000000000000
+0000000000000000000000000000c000c0c0c00000c000c00000cc0c0cc000000c00c0c0000000c00c00c0c0c0c00c0000000000000000000000000000000000
+0000000000000000000000000000c000c0c0ccc0cc00cc0000000ccccc0000000c00cc000000cc000c00c0c0c0c00c0000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 
 __gff__
 000101010181010001000000000101010000000000000000000000000000020000000000000000000000000000000000000000000000000000000001010100010000000000000c0000040400000000000000000000000000000001010101000000000000000000000c0c00000000000000000001000000000000000001000100
