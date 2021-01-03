@@ -8,7 +8,7 @@ __lua__
 
 -- init tab
 -----------
-debug = true
+debug = false
 assert_durer = debug
 
 version = 1.0
