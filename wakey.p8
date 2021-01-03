@@ -8,7 +8,7 @@ __lua__
 
 -- init tab
 -----------
-debug = true
+debug = false
 assert_durer = debug
 
 version = 1.0
@@ -279,7 +279,6 @@ function _init(auto)
 				kss = strjoin(",",ks)  -- sorted - normalised
 				assert(ksc[kss] == nil, kss.." already in keq_seq")
 				ksc[kss]=true
-				--printh("s:"..kss)
 			end
 			--printh("key_seq is unique with #:"..#ksc)
 			--assert(#ksc==#key_seq)
@@ -719,8 +718,8 @@ function draw_room()
 	 	rectfill(40,7, 88, 17, 0)
 	 	rect(40,7, 88, 17, 13)
 		 print("durer", 56,11, 15)
-		 print(".", 59,5, 15)
-		 print(".", 61,5, 15)
+		 print(".", 59,5, 15)  --um
+		 print(".", 61,5, 15)  --laut
 		 if durer_sequence == nil then
 			 print("bring keys", 48,25, 2)
 			elseif durer_sequence == -1 then
@@ -1258,7 +1257,6 @@ function player_move_room()
 				 			local key = get_key_from_map(rx+xx+1,ry+yy)
 				 			if key != nil then
 				  			if durer_keys[key] or pl.keys[key] then
-										local y_w = ceil(wy)  -- todo remove!
 				  				-- hide: already picked up
 				  				local replace = ceil(wy) + yy > water_level and w_water_brick or 0
 						 			mset(rx+xx,ry+yy, replace)
@@ -1426,7 +1424,7 @@ function make_world(h)
 			local y = flr(rnd(h-1))+1
 		 if y > water_level+1 or y < water_level-4 then
 		  -- todo could relax room range here?
-		  if w[y] == nil and w[y+1] == nil and y > room_range_start and y < room_range_end then
+		  if w[y] == nil and w[y+1] == nil and w[y+2] == nil and y > room_range_start and y < room_range_end then
 					-- todo check above/below free too?
 		   w[y] = {}
 					local room = rooms[#rooms]
@@ -1435,7 +1433,11 @@ function make_world(h)
 			 	for i=0,rnd(3)+1 do
 					 w[y+1][flr(i)] = w_default_brick
 					end
-					link_room(room, y+1, l)
+					if y+1 > durer_room_y then
+						link_room(room, y+3, l)  -- underwater ledge before door
+					else
+						link_room(room, y+1, l)
+					end
 				end
 			end
 		end
