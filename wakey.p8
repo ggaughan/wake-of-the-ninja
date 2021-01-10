@@ -11,7 +11,7 @@ __lua__
 debug = false
 assert_durer = debug
 
-version = 1.0
+version = 1.01
 
 water_effect = true
 if water_effect then
@@ -103,7 +103,13 @@ key_seq = {
 	-- pre-corners
 	{5,9,8,12},
 	{3,2,15,14},
-
+	
+	-- other corners
+	{16,2,9,7},
+	{3,13,6,12},
+	{5,11,4,14},
+	{10,8,15,1},
+	
 	-- corners	
 	{16,13,4,1},
 
@@ -155,6 +161,12 @@ key_seq = {
 	
 	{3,10,13,8},
 	{6,15,12,1},
+	
+	-- zigzag
+	{16,8,9,1},
+	{13,12,5,4},
+	{16,15,2,1},
+	{4,3,14,13},
 		
 	-- quadrants
 	{16,3,5,10},
@@ -166,9 +178,9 @@ key_seq = {
 	{10,11,6,7},
 }
 if (assert_durer) printh("durer:"..#key_seq)
-key_seq_dur = 0.8  -- seconds each
+key_seq_dur = 0.6  -- seconds each
 
-w_h = 1000
+--w_h = 1000
 w_h = 800
 room_margin = 10  -- e.g. 4 -> leave top and bottom 1/4 free of rooms
 room_chance = 0.77  -- todo adjust if room_margin or w_h changes
